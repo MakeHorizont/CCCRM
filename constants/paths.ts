@@ -1,0 +1,43 @@
+
+// constants/paths.ts
+
+export const ROUTE_PATHS = {
+  LOGIN: '/login',
+  DASHBOARD: '/dashboard',
+  ANALYTICS: '/analytics', // New path
+  PROFILE: '/profile',
+  CONTACTS: '/contacts',
+  WAREHOUSE: '/warehouse',
+  HOUSEHOLD_ACCOUNTING: '/household-accounting',
+  STORAGES: '/storages',
+  ORDERS: '/orders',
+  PURCHASING: '/purchasing', 
+  KANBAN_HOME: '/kanban', 
+  KANBAN_MY_TASKS: '/kanban/my-tasks', 
+  KANBAN_BOARD: '/kanban/board', 
+  KANBAN_MANAGE_BOARDS: '/kanban/manage', 
+  KANBAN_TASK_DETAIL: '/kanban/task',
+  STRATEGY: '/strategy',
+  KNOWLEDGE_BASE: '/knowledge-base',
+  DISCUSSIONS: '/discussions',
+  SOCIAL_PROGRAMS: '/social-programs', // Deprecated
+  COLLECTIVE_FUND: '/collective-fund',
+  COLLECTIVE_FUND_OVERVIEW: '/collective-fund/overview',
+  COLLECTIVE_FUND_INITIATIVES: '/collective-fund/initiatives',
+  CHARTER: '/charter',
+  ROTATION: '/rotation', 
+  SETTINGS: '/settings',
+  HIERARCHY_MANAGEMENT: '/hierarchy',
+  MAIL: '/mail',
+  PRODUCTION: '/production',
+  PRODUCTION_KIOSK: '/production/kiosk', 
+  TECHNOLOGIES: '/technologies',
+  FINANCIAL_ACCOUNTING: '/financial-accounting',
+  TRANSACTIONS: '/transactions',
+  EQUIPMENT: '/equipment',
+  DOCUMENTS: '/documents',
+  PRINT_DOCUMENT: '/documents/print',
+  NOTIFICATIONS: '/notifications',
+  AUDIT_LOG: '/audit-log', 
+  COUNCIL: '/council',
+};

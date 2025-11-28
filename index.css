@@ -1,0 +1,96 @@
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Light Theme (Clarity/Notion Style) - Default */
+:root {
+  --brand-primary: #4A90E2; /* Muted Blue Accent */
+  --brand-primary-text: #ffffff;
+  --brand-secondary: #f2f2f2; /* Light gray for secondary elements */
+  --brand-secondary-hover: #e6e6e6; /* Slightly darker gray for hover */
+  --brand-background: #FDFCFB; /* Warm white background */
+  --brand-surface: #ffffff;
+  --brand-card: #ffffff;
+  --brand-border: #EAEAEA; /* Subtle border color */
+  --brand-text-primary: #1A1A1A; /* Dark gray text */
+  --brand-text-secondary: #8A8A8A; /* Medium gray text */
+  --brand-text-muted: #BDBDBD; /* Lighter gray for muted text */
+}
+
+/* Dark Theme */
+.dark {
+  --brand-primary: #3b82f6; /* Blue-600 */
+  --brand-primary-text: #ffffff;
+  --brand-secondary: #374151; /* Gray-700 */
+  --brand-secondary-hover: #4b5563; /* Gray-600 */
+  --brand-background: #111827; /* Gray-900 */
+  --brand-surface: #1f2937; /* Gray-800 */
+  --brand-card: #1f2937; /* Gray-800 */
+  --brand-border: #374151; /* Gray-700 */
+  --brand-text-primary: #f9fafb; /* Gray-50 */
+  --brand-text-secondary: #d1d5db; /* Gray-300 */
+  --brand-text-muted: #9ca3af; /* Gray-400 */
+}
+
+/* Custom Scrollbar - Global */
+.custom-scrollbar-thin::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar-thin::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+.dark .custom-scrollbar-thin::-webkit-scrollbar-thumb { background: #52525b; }
+.custom-scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+.dark .custom-scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #71717a; }
+
+/* Markdown Styles */
+.custom-styled-html { color: var(--brand-text-primary); }
+.custom-styled-html h1, .custom-styled-html h2, .custom-styled-html h3 {
+  color: var(--brand-text-primary);
+  border-bottom-color: var(--brand-border);
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+.custom-styled-html a { color: var(--brand-primary); text-decoration: underline; }
+.custom-styled-html blockquote { 
+  color: var(--brand-text-secondary); 
+  border-left: 4px solid var(--brand-border); 
+  padding-left: 1em;
+  margin-left: 0;
+  font-style: italic;
+}
+.custom-styled-html code { 
+  color: #D6336C; 
+  background-color: rgba(214, 51, 108, 0.1); 
+  padding: 0.2em 0.4em;
+  border-radius: 0.25em;
+  font-family: monospace;
+}
+.custom-styled-html pre { 
+  background-color: #F8F9FA; 
+  color: var(--brand-text-primary); 
+  padding: 1em;
+  border-radius: 0.5em;
+  overflow-x: auto;
+}
+.custom-styled-html table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+.custom-styled-html th, .custom-styled-html td { 
+  border: 1px solid var(--brand-border); 
+  padding: 0.5em; 
+}
+.custom-styled-html th { background-color: var(--brand-secondary); font-weight: 600; }
+.custom-styled-html ul, .custom-styled-html ol { padding-left: 1.5em; margin: 0.5em 0; }
+.custom-styled-html ul { list-style-type: disc; }
+.custom-styled-html ol { list-style-type: decimal; }
+
+/* Dark Theme Markdown Overrides */
+.dark .custom-styled-html { color: #d1d5db; }
+.dark .custom-styled-html h1, .dark .custom-styled-html h2, .dark .custom-styled-html h3 {
+  color: #f9fafb;
+  border-bottom-color: #374151;
+}
+.dark .custom-styled-html a { color: #93c5fd; }
+.dark .custom-styled-html blockquote { color: #d1d5db; border-left-color: #4b5563; }
+.dark .custom-styled-html code { color: #fda4af; background-color: rgba(251, 113, 133, 0.15); }
+.dark .custom-styled-html pre { background-color: #111827; color: #d1d5db; }
+.dark .custom-styled-html th, .dark .custom-styled-html td { border-color: #374151; }
+.dark .custom-styled-html th { background-color: #1f2937; }

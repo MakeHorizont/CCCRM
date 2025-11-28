@@ -1,0 +1,77 @@
+import { Order } from '../../types';
+import { generateOrderItemId } from '../../utils/idGenerators'; // Import directly from the new util file
+
+export let mockOrders: Order[] = [
+  { 
+    id: 'order1', 
+    contactId: 'contact1', 
+    customerName: 'Иван Петров', 
+    customerPriority: '1', 
+    items: [
+      { id: generateOrderItemId(), productId: 'TMP001', productName: 'Темпе Классический Соевый 250гр', quantity: 2, pricePerUnit: 250, isAssembled: false }, 
+      { id: generateOrderItemId(), productId: 'CHIP002', productName: 'Темпе-Чипсы Копченые Соевые (со специями) 100гр', quantity: 1, pricePerUnit: 200, isAssembled: false }
+    ], 
+    status: 'Новый', 
+    date: '2023-10-25', 
+    amount: 700, 
+    isPaid: false, 
+    isInvoiceSent: false, 
+    isArchived: false, 
+    productionOrderId: null,
+    assembledOrderLocationId: null,
+    deliveryType: 'delivery',
+    thermalInsulation: false,
+    deliveryCost: 300,
+    history: [],
+    waybillAttachmentUrl: null,
+  },
+  { 
+    id: 'order2', 
+    contactId: 'contact2', 
+    customerName: 'Мария Сидорова', 
+    customerPriority: '2', 
+    items: [
+      { id: generateOrderItemId(), productId: 'TMP003', productName: 'Темпе Классический Гречневый 250гр', quantity: 5, pricePerUnit: 260, isAssembled: false }
+    ], 
+    status: 'В обработке', 
+    date: '2023-10-24', 
+    amount: 1300, 
+    isPaid: true, 
+    paidAt: '2023-10-24T12:00:00Z',
+    isInvoiceSent: true, 
+    invoiceSentAt: '2023-10-24T10:00:00Z',
+    isArchived: false, 
+    productionOrderId: null,
+    assembledOrderLocationId: null,
+    deliveryType: 'pickup',
+    thermalInsulation: true,
+    deliveryCost: 0,
+    history: [],
+    waybillAttachmentUrl: null,
+  },
+  { 
+    id: 'order3', 
+    contactId: 'contact1', 
+    customerName: 'Иван Петров', 
+    customerPriority: '3', 
+    items: [
+      { id: generateOrderItemId(), productId: 'TMP004', productName: 'Темпе Классический Нутовый 250гр', quantity: 10, pricePerUnit: 270, isAssembled: true }
+    ], 
+    status: 'Отправлен', 
+    date: '2023-10-23', 
+    amount: 2700, 
+    isPaid: true, 
+    paidAt: '2023-10-23T11:00:00Z',
+    isInvoiceSent: true, 
+    invoiceSentAt: '2023-10-23T10:00:00Z',
+    sentAt: '2023-10-26T15:00:00Z',
+    isArchived: false, 
+    productionOrderId: null,
+    assembledOrderLocationId: 'loc4',
+    deliveryType: 'delivery',
+    thermalInsulation: false,
+    deliveryCost: 350,
+    history: [],
+    waybillAttachmentUrl: '/mock-uploads/TN-order3.pdf',
+  },
+];
