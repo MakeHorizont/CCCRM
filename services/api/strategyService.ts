@@ -1,3 +1,4 @@
+
 // services/api/strategyService.ts
 import { StrategicPlan, StrategicSubTask, KanbanTask, KanbanTaskStatus, SortableStrategicSubTaskKeys } from '../../types';
 import { mockStrategicPlans } from '../mockData/strategicPlans';
@@ -5,6 +6,8 @@ import { mockKanbanTasks } from '../mockData/kanbanTasks';
 import { delay, deepCopy } from './utils';
 import { generateId } from '../../utils/idGenerators';
 import { DragEndEvent } from '@dnd-kit/core';
+import { API_CONFIG } from './config';
+import { apiClient } from '../apiClient';
 
 export const findTaskRecursive = (tasks: StrategicSubTask[], taskId: string): StrategicSubTask | null => {
   for (const task of tasks) {
@@ -82,17 +85,29 @@ const deleteTaskRecursive = (tasks: StrategicSubTask[], taskId: string): Strateg
 };
 
 const getStrategicPlans = async (filters: { viewMode: 'active' | 'archived' }): Promise<StrategicPlan[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.STRATEGY) {
+        return apiClient.get<StrategicPlan[]>('/strategy/plans', { archived: filters.viewMode === 'archived' });
+    }
+
     await delay(300);
     return deepCopy(mockStrategicPlans).filter(p => filters.viewMode === 'archived' ? p.isArchived : !p.isArchived);
 };
 
 const getStrategicPlanById = async (planId: string): Promise<StrategicPlan | null> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.STRATEGY) {
+        return apiClient.get<StrategicPlan>(`/strategy/plans/${planId}`);
+    }
+
     await delay(200);
     const plan = mockStrategicPlans.find(p => p.id === planId);
     return plan ? deepCopy(plan) : null;
 };
 
 const addStrategicPlan = async (planData: Omit<StrategicPlan, 'id'|'subTasks'|'createdAt'|'updatedAt'|'isArchived'|'archivedAt'>): Promise<StrategicPlan> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.STRATEGY) {
+        return apiClient.post<StrategicPlan>('/strategy/plans', planData);
+    }
+
     await delay(400);
     const newPlan: StrategicPlan = {
       ...planData,
@@ -107,6 +122,10 @@ const addStrategicPlan = async (planData: Omit<StrategicPlan, 'id'|'subTasks'|'c
 };
 
 const updateStrategicPlan = async (planData: StrategicPlan): Promise<StrategicPlan> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.STRATEGY) {
+        return apiClient.patch<StrategicPlan>(`/strategy/plans/${planData.id}`, planData);
+    }
+
     await delay(400);
     const index = mockStrategicPlans.findIndex(p => p.id === planData.id);
     if (index === -1) throw new Error("Strategic Plan not found");
@@ -115,6 +134,11 @@ const updateStrategicPlan = async (planData: StrategicPlan): Promise<StrategicPl
 };
 
 const archiveStrategicPlan = async (planId: string, archive: boolean): Promise<{success: true}> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.STRATEGY) {
+        await apiClient.post(`/strategy/plans/${planId}/archive`, { archive });
+        return { success: true };
+    }
+
     await delay(300);
     const index = mockStrategicPlans.findIndex(p => p.id === planId);
     if (index === -1) throw new Error("Strategic Plan not found");
@@ -125,6 +149,11 @@ const archiveStrategicPlan = async (planId: string, archive: boolean): Promise<{
 };
 
 const deleteStrategicPlan = async (planId: string): Promise<{success: true}> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.STRATEGY) {
+        await apiClient.delete(`/strategy/plans/${planId}`);
+        return { success: true };
+    }
+
     await delay(500);
     const index = mockStrategicPlans.findIndex(p => p.id === planId);
     if (index > -1 && mockStrategicPlans[index].isArchived) {
@@ -136,6 +165,11 @@ const deleteStrategicPlan = async (planId: string): Promise<{success: true}> => 
 };
 
 const addStrategicSubTask = async (planId: string, subTaskData: Omit<StrategicSubTask, 'id'|'createdAt'|'updatedAt'|'assignee'|'kanbanTaskId'|'subTasks'>, newIndexInParent?: number): Promise<StrategicPlan> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.STRATEGY) {
+        // Backend likely has a nested route or separate subtask route
+        return apiClient.post<StrategicPlan>(`/strategy/plans/${planId}/subtasks`, { ...subTaskData, newIndexInParent });
+    }
+
     await delay(300);
     const planIndex = mockStrategicPlans.findIndex(p => p.id === planId);
     if (planIndex === -1) throw new Error("Plan not found");
@@ -151,6 +185,10 @@ const addStrategicSubTask = async (planId: string, subTaskData: Omit<StrategicSu
 };
 
 const updateStrategicSubTask = async (planId: string, subTaskData: StrategicSubTask, newIndexInParent?: number): Promise<StrategicPlan> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.STRATEGY) {
+        return apiClient.patch<StrategicPlan>(`/strategy/plans/${planId}/subtasks/${subTaskData.id}`, { ...subTaskData, newIndexInParent });
+    }
+
     await delay(300);
     const planIndex = mockStrategicPlans.findIndex(p => p.id === planId);
     if (planIndex === -1) throw new Error("Plan not found");
@@ -165,6 +203,10 @@ const updateStrategicSubTask = async (planId: string, subTaskData: StrategicSubT
 };
 
 const deleteStrategicSubTask = async (planId: string, subTaskId: string): Promise<StrategicPlan> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.STRATEGY) {
+        return apiClient.delete<StrategicPlan>(`/strategy/plans/${planId}/subtasks/${subTaskId}`);
+    }
+
     await delay(400);
     const planIndex = mockStrategicPlans.findIndex(p => p.id === planId);
     if (planIndex === -1) throw new Error("Plan not found");
@@ -173,6 +215,11 @@ const deleteStrategicSubTask = async (planId: string, subTaskId: string): Promis
 };
 
 const createKanbanTaskFromStrategicSubTask = async (planId: string, subTaskId: string): Promise<KanbanTask> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.STRATEGY) {
+        // This action crosses domains, but likely initiated from Strategy side
+        return apiClient.post<KanbanTask>(`/strategy/plans/${planId}/subtasks/${subTaskId}/to-kanban`, {});
+    }
+
     await delay(500);
     const plan = mockStrategicPlans.find(p => p.id === planId);
     if (!plan) throw new Error("Plan not found");
@@ -206,11 +253,13 @@ const createKanbanTaskFromStrategicSubTask = async (planId: string, subTaskId: s
     return deepCopy(newKanbanTask);
 };
 
+// Local helper (not API call)
 const findSubTaskInPlan = (plan: StrategicPlan | null, subTaskId: string): StrategicSubTask | null => {
     if (!plan) return null;
     return findTaskRecursive(plan.subTasks, subTaskId);
 };
 
+// Local helper
 const getAndSortDisplayedSubTasks = (
     plan: StrategicPlan,
     parentId: string | null,
@@ -245,6 +294,26 @@ const getAndSortDisplayedSubTasks = (
 };
 
 const handleSubTaskDragEnd = async (event: DragEndEvent, plan: StrategicPlan, currentParentId: string | null): Promise<StrategicPlan> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.STRATEGY) {
+        // Real API would handle reordering via the updateSubTask endpoint or a dedicated reorder endpoint.
+        // For drag and drop, typically we send the new structure or index.
+        // Simplified implementation for mixed mode:
+        const activeId = event.active.id as string;
+        const overId = event.over?.id as string;
+        
+        if (!overId || activeId === overId) return plan;
+        
+        // We need to calculate the new index locally to send to API
+        // This logic is complex to replicate perfectly for API call without knowing the backend impl.
+        // Assuming backend accepts { newParentId, newIndex }
+        
+        // ... Logic to calculate newIndex ...
+        // Then call apiClient.post('/strategy/plans/.../reorder', ...)
+        
+        console.warn("Drag and drop not fully implemented for Real API yet.");
+        return plan; 
+    }
+
     await delay(300);
     const { active, over } = event;
     if (!active || !over) return plan;

@@ -3,14 +3,24 @@
 import { KanbanBoard, KanbanTask, KanbanTaskStatus, StageEntry, FileAttachment } from '../../types';
 import { mockKanbanBoards } from '../mockData/kanbanBoards';
 import { mockKanbanTasks } from '../mockData/kanbanTasks';
-import { mockStrategicPlans } from '../mockData/strategicPlans'; // Import plans for sync
+import { mockStrategicPlans } from '../mockData/strategicPlans'; 
 import { MOCK_USERS } from '../mockData/users';
 import { authService } from '../authService';
 import { delay, deepCopy, createSystemNotification } from './utils';
 import { generateId } from '../../utils/idGenerators';
-import { findTaskRecursive } from './strategyService'; // Helper from strategy service
+import { findTaskRecursive } from './strategyService'; 
+import { API_CONFIG } from './config';
+import { apiClient } from '../apiClient';
 
 const getKanbanBoards = async (userId: string, functionalRoles: string[], includeArchived = false): Promise<KanbanBoard[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+        return apiClient.get<KanbanBoard[]>('/kanban/boards', {
+            userId,
+            includeArchived
+            // Functional roles typically handled by backend auth context
+        });
+    }
+
     await delay(200);
     let boards = deepCopy(mockKanbanBoards);
     if(!includeArchived) {
@@ -30,12 +40,20 @@ const getKanbanBoards = async (userId: string, functionalRoles: string[], includ
 };
 
 const getKanbanBoardById = async (boardId: string): Promise<KanbanBoard | null> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+        return apiClient.get<KanbanBoard>(`/kanban/boards/${boardId}`);
+    }
+
     await delay(100);
     const board = mockKanbanBoards.find(b => b.id === boardId);
     return board ? deepCopy(board) : null;
 };
 
 const addKanbanBoard = async (boardData: Omit<KanbanBoard, 'id' | 'createdAt' | 'updatedAt' | 'isArchived' | 'archivedAt'>): Promise<KanbanBoard> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+        return apiClient.post<KanbanBoard>('/kanban/boards', boardData);
+    }
+
     await delay(400);
     const newBoard: KanbanBoard = {
         ...boardData,
@@ -49,6 +67,10 @@ const addKanbanBoard = async (boardData: Omit<KanbanBoard, 'id' | 'createdAt' | 
 };
 
 const updateKanbanBoard = async (boardData: KanbanBoard): Promise<KanbanBoard> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+        return apiClient.patch<KanbanBoard>(`/kanban/boards/${boardData.id}`, boardData);
+    }
+
     await delay(400);
     const index = mockKanbanBoards.findIndex(b => b.id === boardData.id);
     if(index === -1) throw new Error("Board not found");
@@ -57,6 +79,11 @@ const updateKanbanBoard = async (boardData: KanbanBoard): Promise<KanbanBoard> =
 };
 
 const archiveKanbanBoard = async (boardId: string, archive: boolean): Promise<{success: true}> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+        await apiClient.post(`/kanban/boards/${boardId}/archive`, { archive });
+        return { success: true };
+    }
+
     await delay(300);
     const index = mockKanbanBoards.findIndex(b => b.id === boardId);
     if(index === -1) throw new Error("Board not found");
@@ -67,6 +94,11 @@ const archiveKanbanBoard = async (boardId: string, archive: boolean): Promise<{s
 };
 
 const deleteKanbanBoard = async (boardId: string): Promise<{success: true}> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+        await apiClient.delete(`/kanban/boards/${boardId}`);
+        return { success: true };
+    }
+
     await delay(500);
     const index = mockKanbanBoards.findIndex(b => b.id === boardId);
     if(index > -1 && mockKanbanBoards[index].isArchived) {
@@ -82,13 +114,17 @@ const deleteKanbanBoard = async (boardId: string): Promise<{success: true}> => {
 };
 
 const getKanbanTasks = async (filters: { viewMode?: 'active' | 'archived' | 'all', boardId?: string, assigneeId?: string, status?: KanbanTaskStatus[], startDate?: string, endDate?: string, showInMyTasks?: boolean, selfAssigned?: boolean }): Promise<KanbanTask[]> => {
+  if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+      return apiClient.get<KanbanTask[]>('/kanban/tasks', filters);
+  }
+
   await delay(400);
   let tasks = deepCopy(mockKanbanTasks);
 
   if (filters.viewMode === 'active') tasks = tasks.filter(t => !t.isArchived);
   else if (filters.viewMode === 'archived') tasks = tasks.filter(t => t.isArchived);
 
-  if (filters.boardId) tasks = tasks.filter(t => t.boardIds.includes(filters.boardId));
+  if (filters.boardId) tasks = tasks.filter(t => t.boardIds.includes(filters.boardId!));
   if (filters.assigneeId) tasks = tasks.filter(t => t.assigneeId === filters.assigneeId);
   if (filters.status) tasks = tasks.filter(t => filters.status?.includes(t.status));
   if (filters.showInMyTasks) tasks = tasks.filter(t => t.showInMyTasks);
@@ -100,12 +136,20 @@ const getKanbanTasks = async (filters: { viewMode?: 'active' | 'archived' | 'all
 };
 
 const getKanbanTaskById = async (taskId: string): Promise<KanbanTask | null> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+        return apiClient.get<KanbanTask>(`/kanban/tasks/${taskId}`);
+    }
+
     await delay(200);
     const task = mockKanbanTasks.find(t => t.id === taskId);
     return task ? deepCopy(task) : null;
 };
 
 const addKanbanTask = async (taskData: Omit<KanbanTask, 'id' | 'isArchived' | 'archivedAt' | 'archivedStatus' | 'createdAt' | 'updatedAt' | 'assignee' | 'movedToDoneAt' | 'subTasks' | 'activeTaskStage' | 'taskStagePotentialHistory' | 'taskStageContradictionsHistory' | 'taskStageSolutionHistory' | 'coefficient'>): Promise<KanbanTask> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+        return apiClient.post<KanbanTask>('/kanban/tasks', taskData);
+    }
+
     await delay(400);
     const newTask: KanbanTask = {
     ...taskData,
@@ -137,6 +181,10 @@ const addKanbanTask = async (taskData: Omit<KanbanTask, 'id' | 'isArchived' | 'a
 };
 
 const updateKanbanTask = async (taskData: Partial<KanbanTask> & {id: string}): Promise<KanbanTask> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+        return apiClient.patch<KanbanTask>(`/kanban/tasks/${taskData.id}`, taskData);
+    }
+
     await delay(300);
     const index = mockKanbanTasks.findIndex(t => t.id === taskData.id);
     if (index === -1) throw new Error("Task not found");
@@ -189,6 +237,10 @@ const updateKanbanTask = async (taskData: Partial<KanbanTask> & {id: string}): P
 };
 
 const archiveKanbanTask = async (taskId: string, archive: boolean): Promise<KanbanTask> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+         return apiClient.post<KanbanTask>(`/kanban/tasks/${taskId}/archive`, { archive });
+    }
+
     await delay(300);
     const index = mockKanbanTasks.findIndex(t => t.id === taskId);
     if (index === -1) throw new Error("Task not found");
@@ -205,6 +257,11 @@ const archiveKanbanTask = async (taskId: string, archive: boolean): Promise<Kanb
 };
 
 const deleteKanbanTask = async (taskId: string): Promise<{ success: true }> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+         await apiClient.delete(`/kanban/tasks/${taskId}`);
+         return { success: true };
+    }
+
     await delay(500);
     const index = mockKanbanTasks.findIndex(t => t.id === taskId);
     if (index > -1 && mockKanbanTasks[index].isArchived) {
@@ -217,6 +274,11 @@ const deleteKanbanTask = async (taskId: string): Promise<{ success: true }> => {
 
 
 const addTaskStageEntry = async (taskId: string, stage: 'potential' | 'contradictions' | 'solution', text: string, files: File[]): Promise<KanbanTask> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KANBAN) {
+        // File upload logic would be here in real implementation
+        return apiClient.post<KanbanTask>(`/kanban/tasks/${taskId}/stages`, { stage, text });
+    }
+
     await delay(500);
     const taskIndex = mockKanbanTasks.findIndex(t => t.id === taskId);
     if (taskIndex === -1) throw new Error("Task not found");

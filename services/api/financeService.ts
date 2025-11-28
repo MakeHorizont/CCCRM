@@ -1,4 +1,3 @@
-
 // services/api/financeService.ts
 import { Transaction, TransactionCategory, SortableTransactionKeys, MonthlyExpense, CompanyRequisites } from '../../types';
 import { mockTransactions } from '../mockData/transactions';
@@ -7,8 +6,20 @@ import { mockCompanyRequisites } from '../mockData/companyRequisites';
 import { delay, deepCopy, sortData } from './utils';
 import { generateId } from '../../utils/idGenerators';
 import { systemService } from './systemService'; // Import system service
+import { API_CONFIG } from './config';
+import { apiClient } from '../apiClient';
 
 const getTransactions = async (filters: { searchTerm?: string; typeFilter?: 'income' | 'expense'; categoryFilter?: TransactionCategory | 'Все'; viewMode?: 'active' | 'archived'; sortConfig?: { key: SortableTransactionKeys, direction: 'asc' | 'desc' } }): Promise<Transaction[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.FINANCE) {
+        return apiClient.get<Transaction[]>('/finance/transactions', {
+            search: filters.searchTerm,
+            type: filters.typeFilter,
+            category: filters.categoryFilter !== 'Все' ? filters.categoryFilter : undefined,
+            archived: filters.viewMode === 'archived'
+            // Sort config usually passed as query params too
+        }).then(txs => sortData(txs, filters.sortConfig || { key: 'date', direction: 'desc' }));
+    }
+
     await delay(300);
     let txs = deepCopy(mockTransactions);
     if (filters.viewMode === 'archived') txs = txs.filter(t => t.isArchived);
@@ -24,12 +35,19 @@ const getTransactions = async (filters: { searchTerm?: string; typeFilter?: 'inc
 };
 
 const getTransactionById = async (id: string): Promise<Transaction | null> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.FINANCE) {
+        return apiClient.get<Transaction>(`/finance/transactions/${id}`);
+    }
     await delay(100);
     const tx = mockTransactions.find(t => t.id === id);
     return tx ? deepCopy(tx) : null;
 };
 
 const addTransaction = async (data: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt' | 'isArchived' | 'archivedAt'>): Promise<Transaction> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.FINANCE) {
+        return apiClient.post<Transaction>('/finance/transactions', data);
+    }
+
     await delay(400);
     const newTx: Transaction = {
         ...data,
@@ -43,6 +61,10 @@ const addTransaction = async (data: Omit<Transaction, 'id' | 'createdAt' | 'upda
 };
 
 const updateTransaction = async (data: Transaction): Promise<Transaction> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.FINANCE) {
+        return apiClient.patch<Transaction>(`/finance/transactions/${data.id}`, data);
+    }
+
     await delay(400);
     const index = mockTransactions.findIndex(t => t.id === data.id);
     if (index === -1) throw new Error("Transaction not found");
@@ -72,6 +94,11 @@ const saveTransaction = async (data: Partial<Transaction>): Promise<Transaction>
 };
 
 const archiveTransaction = async (id: string, archive: boolean): Promise<{success: true}> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.FINANCE) {
+        await apiClient.post(`/finance/transactions/${id}/archive`, { archive });
+        return { success: true };
+    }
+
     await delay(300);
     const index = mockTransactions.findIndex(t => t.id === id);
     if (index === -1) throw new Error("Transaction not found");
@@ -90,6 +117,11 @@ const archiveTransaction = async (id: string, archive: boolean): Promise<{succes
 };
 
 const deleteTransaction = async (id: string): Promise<{success: true}> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.FINANCE) {
+        await apiClient.delete(`/finance/transactions/${id}`);
+        return { success: true };
+    }
+
     await delay(500);
     const index = mockTransactions.findIndex(t => t.id === id);
     if(index > -1 && mockTransactions[index].isArchived) {
@@ -111,6 +143,14 @@ const deleteTransaction = async (id: string): Promise<{success: true}> => {
 };
 
 const getMonthlyExpense = async (year: number, month: number): Promise<MonthlyExpense | null> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.FINANCE) {
+        try {
+            return await apiClient.get<MonthlyExpense>(`/finance/expenses/${year}/${month}`);
+        } catch {
+            return null; // Or handle creation if backend returns 404
+        }
+    }
+
     await delay(200);
     const id = `${year}-${String(month + 1).padStart(2, '0')}`;
     let expense = mockMonthlyExpenses.find(e => e.id === id);
@@ -130,6 +170,10 @@ const getMonthlyExpense = async (year: number, month: number): Promise<MonthlyEx
 };
 
 const updateMonthlyExpense = async (data: MonthlyExpense): Promise<MonthlyExpense> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.FINANCE) {
+        return await apiClient.post<MonthlyExpense>(`/finance/expenses`, data); // Assuming POST handles create/update or use PATCH specific ID
+    }
+
     await delay(400);
     const index = mockMonthlyExpenses.findIndex(e => e.id === data.id);
     
@@ -167,11 +211,18 @@ const updateMonthlyExpense = async (data: MonthlyExpense): Promise<MonthlyExpens
 };
 
 const getCompanyRequisites = async (): Promise<CompanyRequisites> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.FINANCE) {
+         return apiClient.get<CompanyRequisites>('/finance/requisites');
+     }
     await delay(100);
     return deepCopy(mockCompanyRequisites);
 };
 
 const updateCompanyRequisites = async (data: CompanyRequisites): Promise<CompanyRequisites> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.FINANCE) {
+         return apiClient.put<CompanyRequisites>('/finance/requisites', data);
+    }
+
     await delay(400);
     // Directly update properties of the imported mutable object
     Object.assign(mockCompanyRequisites, data);

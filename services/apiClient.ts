@@ -48,13 +48,17 @@ class ApiClient {
     }
   }
 
-  public get<T>(endpoint: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
+  public get<T>(endpoint: string, params?: Record<string, string | number | boolean | undefined | (string | number | boolean)[]>): Promise<T> {
     let query = '';
     if (params) {
       const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined) {
-          searchParams.append(key, String(value));
+          if (Array.isArray(value)) {
+            value.forEach(v => searchParams.append(key, String(v)));
+          } else {
+            searchParams.append(key, String(value));
+          }
         }
       });
       query = `?${searchParams.toString()}`;

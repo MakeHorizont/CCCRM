@@ -10,6 +10,9 @@ export interface ApiConfig {
     PRODUCTION: boolean;
     FINANCE: boolean;
     SYSTEM: boolean; // Audit Log & System Events
+    STRATEGY: boolean;
+    KANBAN: boolean;
+    KNOWLEDGE_BASE: boolean;
   };
   MOCK_DELAY: number;
 }
@@ -24,7 +27,10 @@ export const API_CONFIG: ApiConfig = {
     ORDERS: false,
     PRODUCTION: false,
     FINANCE: false,
-    SYSTEM: false, 
+    SYSTEM: false,
+    STRATEGY: false,
+    KANBAN: false,
+    KNOWLEDGE_BASE: false,
   },
   MOCK_DELAY: 300,
 };

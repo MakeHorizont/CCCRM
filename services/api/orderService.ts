@@ -11,10 +11,25 @@ import { delay, deepCopy, sortData, eventManager } from './utils';
 import { generateId } from '../../utils/idGenerators';
 import { checkProductionOrderMaterialShortage } from './productionService';
 import { PRIORITY_SORT_MAP } from '../../constants';
+import { API_CONFIG } from './config';
+import { apiClient } from '../apiClient';
 
 type SortConfig<T> = { key: keyof T, direction: 'asc' | 'desc' } | null;
 
 const getOrders = (filters: { searchTerm?: string; statusFilter?: OrderStatus | 'Все'; paymentFilter?: 'all' | 'paid' | 'unpaid', viewMode?: 'active' | 'archived' | 'all', sortConfig?: SortConfig<Order> }): Promise<Order[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+        return apiClient.get<Order[]>('/sales/orders', {
+            search: filters.searchTerm,
+            status: filters.statusFilter !== 'Все' ? filters.statusFilter : undefined,
+            paymentStatus: filters.paymentFilter === 'all' ? undefined : filters.paymentFilter,
+            viewMode: filters.viewMode
+        }).then(orders => {
+             // Apply client-side sorting if API doesn't support complex sorting yet, or rely on API.
+             // For now, we assume API returns basic list and we sort here or API handles it via params not yet implemented in client
+             return sortData(orders, filters.sortConfig || { key: 'date', direction: 'desc' });
+        });
+    }
+
     return new Promise((resolve) => {
       delay(400).then(() => {
         let filteredOrders = deepCopy(mockOrders);
@@ -63,6 +78,10 @@ const getOrders = (filters: { searchTerm?: string; statusFilter?: OrderStatus | 
 };
 
 const getOrderById = (orderId: string): Promise<Order | null> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+        return apiClient.get<Order>(`/sales/orders/${orderId}`);
+    }
+
     return new Promise((resolve) => {
       delay(200).then(() => {
         const order = mockOrders.find(o => o.id === orderId);
@@ -72,6 +91,10 @@ const getOrderById = (orderId: string): Promise<Order | null> => {
 };
   
 const addOrder = (orderData: Omit<Order, 'id' | 'isArchived' | 'archivedAt' | 'amount' | 'customerName' | 'customerPriority' | 'date' | 'productionOrderStatus' | 'updatedAt' | 'history'>): Promise<Order> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+        return apiClient.post<Order>('/sales/orders', orderData);
+    }
+
     return new Promise((resolve, reject) => {
         delay(500).then(() => {
             const contact = mockContacts.find(c => c.id === orderData.contactId);
@@ -96,6 +119,10 @@ const addOrder = (orderData: Omit<Order, 'id' | 'isArchived' | 'archivedAt' | 'a
 };
 
 const updateOrder = (orderData: Order): Promise<Order> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+        return apiClient.patch<Order>(`/sales/orders/${orderData.id}`, orderData);
+    }
+
     return new Promise((resolve, reject) => {
         delay(500).then(async () => {
             const index = mockOrders.findIndex(o => o.id === orderData.id);
@@ -183,6 +210,10 @@ const updateOrder = (orderData: Order): Promise<Order> => {
 };
   
 const archiveOrder = (orderId: string, archive: boolean): Promise<{success: true}> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+        return apiClient.post<{success: true}>(`/sales/orders/${orderId}/archive`, { archive });
+    }
+
      return new Promise((resolve, reject) => {
         delay(300).then(() => {
             const index = mockOrders.findIndex(c => c.id === orderId);
@@ -198,6 +229,10 @@ const archiveOrder = (orderId: string, archive: boolean): Promise<{success: true
 };
 
 const deleteOrder = (orderId: string): Promise<{success: true}> => {
+      if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+          return apiClient.delete<{success: true}>(`/sales/orders/${orderId}`);
+      }
+
       return new Promise((resolve, reject) => {
           delay(500).then(() => {
               const index = mockOrders.findIndex(o => o.id === orderId);
@@ -214,6 +249,11 @@ const deleteOrder = (orderId: string): Promise<{success: true}> => {
 };
   
 const checkOrderAvailability = (items: OrderItem[]): Promise<{ allAvailable: boolean, itemAvailability: Record<string, { available: number, needed: number }> }> => {
+    // This is complex logic. If Real API is used, we probably call a specific endpoint like /sales/check-availability
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+        return apiClient.post('/sales/orders/check-availability', { items });
+    }
+
     return new Promise((resolve) => {
       delay(150).then(() => {
         let allAvailable = true;
@@ -234,6 +274,10 @@ const checkOrderAvailability = (items: OrderItem[]): Promise<{ allAvailable: boo
 };
 
 const createProductionOrderFromSalesOrder = (orderId: string): Promise<ProductionOrder> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+        return apiClient.post<ProductionOrder>(`/production/orders/from-sales/${orderId}`, {});
+    }
+
     return new Promise((resolve, reject) => {
         delay(500).then(() => {
             const salesOrder = mockOrders.find(o => o.id === orderId);
@@ -289,6 +333,10 @@ const createProductionOrderFromSalesOrder = (orderId: string): Promise<Productio
 };
 
 const updateOrderItemAssembledStatus = (orderId: string, itemId: string, isAssembled: boolean, userId: string): Promise<Order> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+        return apiClient.patch<Order>(`/sales/orders/${orderId}/items/${itemId}/assembly`, { isAssembled });
+    }
+
     return new Promise((resolve, reject) => {
         delay(200).then(() => {
             const orderIndex = mockOrders.findIndex(o => o.id === orderId);
@@ -325,6 +373,10 @@ const updateOrderItemAssembledStatus = (orderId: string, itemId: string, isAssem
 };
 
 const seizeStockForOrder = async (orderId: string, userId: string): Promise<Order> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+        return apiClient.post<Order>(`/sales/orders/${orderId}/seize-stock`, {});
+    }
+
     await delay(1000);
     const orderIndex = mockOrders.findIndex(o => o.id === orderId);
     if (orderIndex === -1) throw new Error("Целевой заказ не найден");
@@ -422,6 +474,10 @@ const seizeStockForOrder = async (orderId: string, userId: string): Promise<Orde
 };
 
 const updateOrderAssembled = async (orderId: string, locationId: string | null, userId: string): Promise<Order> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+        return apiClient.post<Order>(`/sales/orders/${orderId}/assemble`, { locationId });
+    }
+
     await delay(600);
     const orderIndex = mockOrders.findIndex(o => o.id === orderId);
     if (orderIndex === -1) throw new Error("Order not found");
@@ -476,6 +532,11 @@ const updateOrderAssembled = async (orderId: string, locationId: string | null, 
 };
 
 const markOrderAssembledAndDeductStock = async (orderId: string, userId: string): Promise<Order> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.ORDERS) {
+        // Same endpoint as assemble, but maybe with specific params if backend distinguishes "fast assemble" vs "scan assemble"
+        return apiClient.post<Order>(`/sales/orders/${orderId}/assemble`, { locationId: null }); 
+    }
+
     await delay(600);
     const orderIndex = mockOrders.findIndex(o => o.id === orderId);
     if (orderIndex === -1) throw new Error("Заказ не найден.");
