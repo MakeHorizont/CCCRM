@@ -1,11 +1,25 @@
+
 // services/api/equipmentService.ts
 import { EquipmentItem, EquipmentStatus, StorageLocation } from '../../types';
 import { mockEquipment } from '../mockData/equipment';
 import { mockStorageLocations } from '../mockData/storageLocations'; // Import mock data directly
 import { delay, deepCopy } from './utils';
 import { generateId } from '../../utils/idGenerators';
+import { API_CONFIG } from './config';
+import { apiClient } from '../apiClient';
 
 const getEquipmentItems = async (filters: { searchTerm?: string, viewMode?: 'active' | 'archived' | 'all' }): Promise<EquipmentItem[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) { // Assuming equipment is part of warehouse module context or has its own
+         try {
+            return await apiClient.get<EquipmentItem[]>('/equipment', {
+                search: filters.searchTerm,
+                viewMode: filters.viewMode
+            });
+         } catch (error) {
+             console.error("Failed to fetch equipment from API", error);
+         }
+    }
+
     await delay(300);
     let items = deepCopy(mockEquipment);
     if (filters.viewMode === 'archived') {
@@ -21,6 +35,10 @@ const getEquipmentItems = async (filters: { searchTerm?: string, viewMode?: 'act
 };
 
 const addEquipmentItem = async (data: Omit<EquipmentItem, 'id' | 'isArchived' | 'createdAt' | 'updatedAt'>): Promise<EquipmentItem> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+        return await apiClient.post<EquipmentItem>('/equipment', data);
+    }
+
     await delay(400);
     const newItem: EquipmentItem = {
         ...data,
@@ -50,6 +68,10 @@ const addEquipmentItem = async (data: Omit<EquipmentItem, 'id' | 'isArchived' | 
 };
 
 const updateEquipmentItem = async (data: EquipmentItem): Promise<EquipmentItem> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+        return await apiClient.patch<EquipmentItem>(`/equipment/${data.id}`, data);
+    }
+
     await delay(400);
     const index = mockEquipment.findIndex(e => e.id === data.id);
     if (index === -1) throw new Error("Equipment not found");
@@ -93,6 +115,10 @@ const updateEquipmentItem = async (data: EquipmentItem): Promise<EquipmentItem> 
 };
 
 const duplicateEquipmentItem = async (id: string): Promise<EquipmentItem> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+         return await apiClient.post<EquipmentItem>(`/equipment/${id}/duplicate`, {});
+    }
+
     await delay(400);
     const original = mockEquipment.find(e => e.id === id);
     if (!original) throw new Error("Equipment to duplicate not found");
@@ -110,6 +136,11 @@ const duplicateEquipmentItem = async (id: string): Promise<EquipmentItem> => {
 };
 
 const archiveEquipmentItem = async (id: string, archive: boolean): Promise<{ success: true }> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+         await apiClient.post(`/equipment/${id}/archive`, { archive });
+         return { success: true };
+    }
+
     await delay(300);
     const index = mockEquipment.findIndex(e => e.id === id);
     if (index === -1) throw new Error("Equipment not found");
@@ -127,6 +158,11 @@ const archiveEquipmentItem = async (id: string, archive: boolean): Promise<{ suc
 };
 
 const deleteEquipmentItem = async (id: string): Promise<{ success: true }> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+         await apiClient.delete(`/equipment/${id}`);
+         return { success: true };
+    }
+
     await delay(500);
     const index = mockEquipment.findIndex(e => e.id === id);
     if (index > -1 && mockEquipment[index].isArchived) {

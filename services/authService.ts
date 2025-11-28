@@ -1,5 +1,7 @@
 import { User } from '../types';
-import { MOCK_USERS, CEO_EMAILS } from './mockData/users'; // Import MOCK_USERS and CEO_EMAILS
+import { MOCK_USERS, CEO_EMAILS } from './mockData/users';
+import { API_CONFIG } from './api/config';
+import { apiClient } from './apiClient';
 
 export interface LoginCredentials {
   email: string;
@@ -7,10 +9,30 @@ export interface LoginCredentials {
   name?: string;
 }
 
+interface AuthResponse {
+  accessToken: string;
+  user: User;
+}
+
 let MOCK_LOGGED_IN_USER: User | null = null;
 
 export const authService = {
-  login: (credentials: LoginCredentials): Promise<User> => {
+  login: async (credentials: LoginCredentials): Promise<User> => {
+    // 1. REAL API PATH
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.AUTH) {
+      try {
+        const response = await apiClient.post<AuthResponse>('/auth/login', credentials);
+        localStorage.setItem('authToken', response.accessToken);
+        localStorage.setItem('authUser', JSON.stringify(response.user));
+        MOCK_LOGGED_IN_USER = response.user;
+        return response.user;
+      } catch (error) {
+        console.error("Real API Login failed:", error);
+        throw error; // Propagate error to UI
+      }
+    }
+
+    // 2. MOCK PATH (Legacy)
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         const loginIdentifier = credentials.email.toLowerCase();
@@ -40,6 +62,8 @@ export const authService = {
           };
           MOCK_LOGGED_IN_USER = fullUser;
           localStorage.setItem('authUser', JSON.stringify(fullUser));
+          // In mock mode, we don't set a real token, but we could set a dummy one
+          localStorage.setItem('authToken', 'mock-jwt-token'); 
           resolve(fullUser);
         } else {
           reject(new Error('Неверный email/логин или пароль.'));
@@ -48,7 +72,22 @@ export const authService = {
     });
   },
 
-  register: (credentials: LoginCredentials): Promise<User> => {
+  register: async (credentials: LoginCredentials): Promise<User> => {
+     // 1. REAL API PATH
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.AUTH) {
+        try {
+          const response = await apiClient.post<AuthResponse>('/auth/register', credentials);
+          localStorage.setItem('authToken', response.accessToken);
+          localStorage.setItem('authUser', JSON.stringify(response.user));
+          MOCK_LOGGED_IN_USER = response.user;
+          return response.user;
+        } catch (error) {
+          console.error("Real API Register failed:", error);
+          throw error;
+        }
+      }
+
+    // 2. MOCK PATH
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         if (MOCK_USERS.some(u => u.email === credentials.email)) {
@@ -84,57 +123,85 @@ export const authService = {
         MOCK_USERS.push(newUser); // Modifies the imported MOCK_USERS array
         MOCK_LOGGED_IN_USER = newUser;
         localStorage.setItem('authUser', JSON.stringify(newUser));
+        localStorage.setItem('authToken', 'mock-jwt-token');
         resolve(newUser);
       }, 1000);
     });
   },
 
-  logout: (): Promise<void> => {
+  logout: async (): Promise<void> => {
+    // 1. REAL API PATH (Optional, usually stateless)
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.AUTH) {
+        try {
+             await apiClient.post('/auth/logout', {});
+        } catch (e) {
+            console.warn("Logout on server failed, clearing local state anyway.");
+        }
+    }
+
+    // 2. LOCAL CLEANUP (Always)
     return new Promise((resolve) => {
       setTimeout(() => {
         MOCK_LOGGED_IN_USER = null;
         localStorage.removeItem('authUser');
+        localStorage.removeItem('authToken');
         resolve();
       }, 500);
     });
   },
 
-  getCurrentUser: (): Promise<User | null> => {
+  getCurrentUser: async (): Promise<User | null> => {
+    // 1. REAL API PATH
+    // We check for token presence first
+    const token = localStorage.getItem('authToken');
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.AUTH && token && token !== 'mock-jwt-token') {
+        try {
+            const user = await apiClient.get<User>('/auth/me');
+            MOCK_LOGGED_IN_USER = user;
+            localStorage.setItem('authUser', JSON.stringify(user)); // Update cache
+            return user;
+        } catch (e) {
+            // If token invalid, clear it
+            console.warn("Token invalid, clearing session.");
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('authUser');
+            MOCK_LOGGED_IN_USER = null;
+            return null;
+        }
+    }
+
+    // 2. MOCK PATH / CACHED FALLBACK
     return new Promise((resolve) => {
       setTimeout(() => {
          const storedUser = localStorage.getItem('authUser');
         if (storedUser) {
           const parsedUser: User = JSON.parse(storedUser);
-          const liveUser = MOCK_USERS.find(u => u.id === parsedUser.id);
-          if (liveUser) {
-            MOCK_LOGGED_IN_USER = {
-                ...liveUser,
-                attendance: liveUser.attendance || [],
-                tripBonusPerDay: liveUser.tripBonusPerDay === undefined ? 0 : liveUser.tripBonusPerDay,
-                remoteWorkRate: liveUser.remoteWorkRate === undefined ? 0 : liveUser.remoteWorkRate,
-                dailyRate: liveUser.dailyRate === undefined ? 2000 : liveUser.dailyRate,
-                achievements: liveUser.achievements || [],
-                displayedAchievementId: liveUser.displayedAchievementId || null,
-                developmentPlan: liveUser.developmentPlan || [],
-                trainingApplications: liveUser.trainingApplications || [],
-                performanceReviews: liveUser.performanceReviews || [],
-                salaryHistory: liveUser.salaryHistory || [],
-            };
-          } else {
-             MOCK_LOGGED_IN_USER = {
-                ...parsedUser,
-                attendance: parsedUser.attendance || [],
-                tripBonusPerDay: parsedUser.tripBonusPerDay === undefined ? 0 : parsedUser.tripBonusPerDay,
-                remoteWorkRate: parsedUser.remoteWorkRate === undefined ? 0 : parsedUser.remoteWorkRate,
-                dailyRate: parsedUser.dailyRate === undefined ? 2000 : parsedUser.dailyRate,
-                achievements: parsedUser.achievements || [],
-                displayedAchievementId: parsedUser.displayedAchievementId || null,
-                developmentPlan: parsedUser.developmentPlan || [],
-                trainingApplications: parsedUser.trainingApplications || [],
-                performanceReviews: parsedUser.performanceReviews || [],
-                salaryHistory: parsedUser.salaryHistory || [],
-            };
+          
+          // If we are in pure Mock mode, we try to sync with the in-memory mock DB
+          if (!API_CONFIG.USE_REAL_API) {
+             const liveUser = MOCK_USERS.find(u => u.id === parsedUser.id);
+              if (liveUser) {
+                // Re-hydrate with fresh mock data
+                MOCK_LOGGED_IN_USER = {
+                    ...liveUser,
+                    attendance: liveUser.attendance || [],
+                    tripBonusPerDay: liveUser.tripBonusPerDay === undefined ? 0 : liveUser.tripBonusPerDay,
+                    remoteWorkRate: liveUser.remoteWorkRate === undefined ? 0 : liveUser.remoteWorkRate,
+                    dailyRate: liveUser.dailyRate === undefined ? 2000 : liveUser.dailyRate,
+                    achievements: liveUser.achievements || [],
+                    displayedAchievementId: liveUser.displayedAchievementId || null,
+                    developmentPlan: liveUser.developmentPlan || [],
+                    trainingApplications: liveUser.trainingApplications || [],
+                    performanceReviews: liveUser.performanceReviews || [],
+                    salaryHistory: liveUser.salaryHistory || [],
+                };
+                resolve(MOCK_LOGGED_IN_USER);
+                return;
+              }
           }
+          
+          // Fallback to stored user if not found in mock or if simple mode
+          MOCK_LOGGED_IN_USER = parsedUser;
           resolve(MOCK_LOGGED_IN_USER);
         } else {
           resolve(null);
@@ -156,22 +223,20 @@ export const authService = {
       performanceReviews: u.performanceReviews || [],
       salaryHistory: u.salaryHistory || [],
   })),
+  
   updateMockUser: (updatedUser: User): void => { // Operates on the imported MOCK_USERS
     const index = MOCK_USERS.findIndex(u => u.id === updatedUser.id);
     if (index !== -1) {
       MOCK_USERS[index] = {
           ...MOCK_USERS[index],
           ...updatedUser,
+          // Ensure arrays are merged or overwritten correctly
           attendance: updatedUser.attendance || MOCK_USERS[index].attendance || [],
-          tripBonusPerDay: updatedUser.tripBonusPerDay === undefined ? (MOCK_USERS[index].tripBonusPerDay === undefined ? 0 : MOCK_USERS[index].tripBonusPerDay) : updatedUser.tripBonusPerDay,
-          remoteWorkRate: updatedUser.remoteWorkRate === undefined ? (MOCK_USERS[index].remoteWorkRate === undefined ? 0 : MOCK_USERS[index].remoteWorkRate) : updatedUser.remoteWorkRate,
-          dailyRate: updatedUser.dailyRate === undefined ? (MOCK_USERS[index].dailyRate === undefined ? 2000 : MOCK_USERS[index].dailyRate) : updatedUser.dailyRate,
           achievements: updatedUser.achievements || MOCK_USERS[index].achievements || [],
           developmentPlan: updatedUser.developmentPlan || MOCK_USERS[index].developmentPlan || [],
           trainingApplications: updatedUser.trainingApplications || MOCK_USERS[index].trainingApplications || [],
           performanceReviews: updatedUser.performanceReviews || MOCK_USERS[index].performanceReviews || [],
           salaryHistory: updatedUser.salaryHistory || MOCK_USERS[index].salaryHistory || [],
-          displayedAchievementId: updatedUser.displayedAchievementId === undefined ? (MOCK_USERS[index].displayedAchievementId || null) : updatedUser.displayedAchievementId,
       };
       if (MOCK_LOGGED_IN_USER?.id === updatedUser.id) {
         MOCK_LOGGED_IN_USER = MOCK_USERS[index];

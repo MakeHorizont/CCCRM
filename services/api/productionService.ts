@@ -13,6 +13,8 @@ import { authService } from '../authService';
 import { delay, deepCopy, eventManager, createSystemNotification } from './utils';
 import { generateId } from '../../utils/idGenerators';
 import { systemService } from './systemService'; // Import Audit Log service
+import { API_CONFIG } from './config';
+import { apiClient } from '../apiClient';
 
 export const checkProductionOrderMaterialShortage = (po: ProductionOrder): boolean => {
     let hasShortage = false;
@@ -39,6 +41,18 @@ export const checkProductionOrderMaterialShortage = (po: ProductionOrder): boole
 
 
 const getProductionOrders = async (filters: { searchTerm?: string; statusFilter?: ProductionOrderStatus | 'Все'; viewMode?: 'active' | 'archived' | 'all' }): Promise<ProductionOrder[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        try {
+            return await apiClient.get<ProductionOrder[]>('/production/orders', {
+                search: filters.searchTerm,
+                status: filters.statusFilter !== 'Все' ? filters.statusFilter : undefined,
+                archived: filters.viewMode === 'archived'
+            });
+        } catch (error) {
+            console.error("Failed to fetch production orders from API", error);
+        }
+    }
+
     await delay(400);
     let orders = deepCopy(mockProductionOrders);
     if (filters.viewMode === 'archived') {
@@ -62,6 +76,10 @@ const getProductionOrders = async (filters: { searchTerm?: string; statusFilter?
 };
 
 const addProductionOrder = async (orderData: Omit<ProductionOrder, 'id' | 'createdAt' | 'updatedAt' | 'isArchived' | 'archivedAt' | 'assigneeName' | 'needsReviewAfterSalesOrderUpdate' | 'financialTransactionsPosted' | 'brigadeBonus' | 'calculatedLaborCost'|'calculatedRawMaterialCost'|'allocatedOverheadCost'|'totalCalculatedCost'>): Promise<ProductionOrder> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        return await apiClient.post<ProductionOrder>('/production/orders', orderData);
+    }
+
     await delay(400);
     
     // --- PHYSICS ENGINE CHECK ---
@@ -104,6 +122,10 @@ const addProductionOrder = async (orderData: Omit<ProductionOrder, 'id' | 'creat
 };
 
 const updateProductionOrder = async (orderData: ProductionOrder): Promise<ProductionOrder> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        return await apiClient.patch<ProductionOrder>(`/production/orders/${orderData.id}`, orderData);
+    }
+
     await delay(400);
     const index = mockProductionOrders.findIndex(po => po.id === orderData.id);
     if (index === -1) throw new Error("Production Order not found");
@@ -286,6 +308,11 @@ const updateProductionOrder = async (orderData: ProductionOrder): Promise<Produc
 };
 
 const archiveProductionOrder = async (id: string, archive: boolean): Promise<{success:true}> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        await apiClient.post(`/production/orders/${id}/archive`, { archive });
+        return { success: true };
+    }
+
     await delay(300);
     const index = mockProductionOrders.findIndex(p => p.id === id);
     if (index === -1) throw new Error("Production Order not found");
@@ -304,6 +331,11 @@ const archiveProductionOrder = async (id: string, archive: boolean): Promise<{su
 };
 
 const deleteProductionOrder = async(id: string): Promise<{success:true}> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        await apiClient.delete(`/production/orders/${id}`);
+        return { success: true };
+    }
+
     await delay(500);
     const index = mockProductionOrders.findIndex(p => p.id === id);
     if (index > -1 && mockProductionOrders[index].isArchived) {
@@ -325,6 +357,10 @@ const deleteProductionOrder = async(id: string): Promise<{success:true}> => {
 };
 
 const getTechnologyCards = async(filters?: { viewMode: 'active' | 'archived' | 'all' }): Promise<TechnologyCard[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        return await apiClient.get<TechnologyCard[]>('/production/technologies', filters);
+    }
+
     await delay(200);
     let cards = deepCopy(mockTechnologyCards);
     if (filters?.viewMode === 'archived') {
@@ -337,12 +373,24 @@ const getTechnologyCards = async(filters?: { viewMode: 'active' | 'archived' | '
 };
 
 const getTechnologyCardByWarehouseItemId = async (id: string): Promise<TechnologyCard | null> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        try {
+            return await apiClient.get<TechnologyCard>(`/production/technologies/by-item/${id}`);
+        } catch {
+            return null;
+        }
+    }
+
     await delay(200);
     const card = mockTechnologyCards.find(c => c.warehouseItemId === id);
     return card ? deepCopy(card) : null;
 };
 
 const addTechnologyCard = async (card: Omit<TechnologyCard, 'id' | 'version' | 'updatedAt'>): Promise<TechnologyCard> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        return await apiClient.post<TechnologyCard>('/production/technologies', card);
+    }
+
     await delay(400);
     const newCard: TechnologyCard = {
         ...card,
@@ -365,6 +413,10 @@ const addTechnologyCard = async (card: Omit<TechnologyCard, 'id' | 'version' | '
 };
 
 const updateTechnologyCard = async (card: TechnologyCard): Promise<TechnologyCard> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        return await apiClient.patch<TechnologyCard>(`/production/technologies/${card.id}`, card);
+    }
+
     await delay(400);
     const index = mockTechnologyCards.findIndex(c => c.id === card.id);
     if (index === -1) throw new Error("Tech card not found");
@@ -383,6 +435,11 @@ const updateTechnologyCard = async (card: TechnologyCard): Promise<TechnologyCar
 };
 
 const archiveTechnologyCard = async (id: string, archive: boolean): Promise<{ success: true }> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        await apiClient.post(`/production/technologies/${id}/archive`, { archive });
+        return { success: true };
+    }
+
     await delay(300);
     const index = mockTechnologyCards.findIndex(c => c.id === id);
     if (index === -1) throw new Error("Tech card not found");
@@ -392,6 +449,11 @@ const archiveTechnologyCard = async (id: string, archive: boolean): Promise<{ su
 };
 
 const deleteTechnologyCard = async (id: string): Promise<{ success: true }> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        await apiClient.delete(`/production/technologies/${id}`);
+        return { success: true };
+    }
+
     await delay(500);
     const index = mockTechnologyCards.findIndex(c => c.id === id);
     if (index > -1 && mockTechnologyCards[index].isArchived) {
@@ -404,6 +466,10 @@ const deleteTechnologyCard = async (id: string): Promise<{ success: true }> => {
 
 
 const updateProductionRunStep = async (orderId: string, orderItemId: string, stepId: string, updates: Partial<ProductionRunStep> & { userId: string }): Promise<ProductionOrder> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        return await apiClient.patch<ProductionOrder>(`/production/orders/${orderId}/items/${orderItemId}/steps/${stepId}`, updates);
+    }
+
     await delay(300);
     const poIndex = mockProductionOrders.findIndex(p => p.id === orderId);
     if(poIndex === -1) throw new Error("Production Order not found");

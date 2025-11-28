@@ -9,8 +9,25 @@ import { MOCK_USERS } from '../mockData/users';
 import { delay, deepCopy, eventManager } from './utils';
 import { generateId } from '../../utils/idGenerators';
 import { authService } from '../authService';
+import { API_CONFIG } from './config';
+import { apiClient } from '../apiClient';
 
 const getWarehouseItems = async (filters: { searchTerm?: string; viewMode?: 'active' | 'archived' | 'all' }): Promise<WarehouseItem[]> => {
+    // STRANGLER PATTERN: Check Real API
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+        try {
+            // Backend is expected to return items with joined locationName and incident counts
+            return await apiClient.get<WarehouseItem[]>('/warehouse/items', {
+                search: filters.searchTerm,
+                archived: filters.viewMode === 'archived',
+                // 'all' viewMode logic might need specific backend handling or multiple requests if API is strict
+            });
+        } catch (error) {
+            console.error("Failed to fetch warehouse items from API", error);
+            // Fallback to mock if allowed or throw
+        }
+    }
+
     await delay(300);
     let items = deepCopy(mockWarehouseItems);
     if (filters.viewMode === 'archived') {
@@ -31,6 +48,14 @@ const getWarehouseItems = async (filters: { searchTerm?: string; viewMode?: 'act
 };
 
 const getWarehouseItemById = async (id: string): Promise<WarehouseItem | null> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+        try {
+            return await apiClient.get<WarehouseItem>(`/warehouse/items/${id}`);
+        } catch (error) {
+            console.error(`Failed to fetch warehouse item ${id}`, error);
+        }
+    }
+
     await delay(100);
     const item = mockWarehouseItems.find(i => i.id === id);
     if (!item) return null;
@@ -43,6 +68,10 @@ const getWarehouseItemById = async (id: string): Promise<WarehouseItem | null> =
 };
 
 const addWarehouseItem = async (itemData: Omit<WarehouseItem, 'id' | 'isArchived' | 'lastUpdated'| 'archivedAt' | 'history' | 'openIncidentsCount'>): Promise<WarehouseItem> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+         return await apiClient.post<WarehouseItem>('/warehouse/items', itemData);
+    }
+
     await delay(400);
     const newItem: WarehouseItem = {
         id: generateId('wh'),
@@ -65,6 +94,17 @@ const addWarehouseItem = async (itemData: Omit<WarehouseItem, 'id' | 'isArchived
 };
 
 const updateWarehouseItem = async (itemData: WarehouseItem): Promise<WarehouseItem> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+         const response = await apiClient.patch<WarehouseItem>(`/warehouse/items/${itemData.id}`, itemData);
+         // We might need to re-dispatch the low stock event here based on response, 
+         // or assume the backend handles notifications (which is cleaner).
+         // For hybrid compatibility, we check response:
+         if (response.lowStockThreshold !== undefined && response.quantity <= response.lowStockThreshold) {
+             eventManager.dispatch('stock.below_threshold', { item: response, itemType: 'warehouse' });
+         }
+         return response;
+    }
+
     await delay(400);
     const index = mockWarehouseItems.findIndex(i => i.id === itemData.id);
     if (index === -1) throw new Error("Item not found");
@@ -80,6 +120,11 @@ const updateWarehouseItem = async (itemData: WarehouseItem): Promise<WarehouseIt
 };
 
 const archiveWarehouseItem = async (id: string, archive: boolean): Promise<{ success: true }> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+         await apiClient.post(`/warehouse/items/${id}/archive`, { archive });
+         return { success: true };
+    }
+
     await delay(300);
     const index = mockWarehouseItems.findIndex(i => i.id === id);
     if (index === -1) throw new Error("Item not found");
@@ -90,6 +135,11 @@ const archiveWarehouseItem = async (id: string, archive: boolean): Promise<{ suc
 };
 
 const deleteWarehouseItem = async (id: string): Promise<{ success: true }> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+         await apiClient.delete(`/warehouse/items/${id}`);
+         return { success: true };
+    }
+
     await delay(500);
     const index = mockWarehouseItems.findIndex(i => i.id === id);
     if (index !== -1 && mockWarehouseItems[index].isArchived) {
@@ -101,6 +151,18 @@ const deleteWarehouseItem = async (id: string): Promise<{ success: true }> => {
 };
     
 const updateWarehouseItemQuantity = async (itemId: string, quantityChange: number, userId: string, reason: string): Promise<WarehouseItem> => {
+    // This is a specialized operation, might map to a specific endpoint or generic update
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+         // Option A: Use PATCH with business logic on backend (preferred)
+         // Option B: Dedicated endpoint POST /warehouse/items/:id/adjust-stock
+         const response = await apiClient.post<WarehouseItem>(`/warehouse/items/${itemId}/adjust-stock`, { quantityChange, reason, userId });
+         
+         if (response.lowStockThreshold !== undefined && response.quantity <= response.lowStockThreshold) {
+            eventManager.dispatch('stock.below_threshold', { item: response, itemType: 'warehouse' });
+         }
+         return response;
+    }
+
     await delay(400);
     const index = mockWarehouseItems.findIndex(i => i.id === itemId);
     if (index === -1) throw new Error("Item not found");
@@ -134,11 +196,21 @@ const updateWarehouseItemQuantity = async (itemId: string, quantityChange: numbe
 };
 
 const getIncidentsForItem = async(itemId: string): Promise<WarehouseItemIncident[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+        return await apiClient.get<WarehouseItemIncident[]>(`/warehouse/items/${itemId}/incidents`);
+    }
+
     await delay(200);
     return deepCopy(mockWarehouseIncidents.filter(inc => inc.warehouseItemId === itemId).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
 };
     
 const addIncident = async(incidentData: Omit<WarehouseItemIncident, 'id'|'timestamp'|'isResolved'|'userName'>, files?: File[]): Promise<WarehouseItemIncident> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+        // File upload would likely be multipart/form-data, handled separately or via pre-signed URLs.
+        // For simplicity here, we assume file metadata is handled or ignored in MVP.
+        return await apiClient.post<WarehouseItemIncident>('/warehouse/incidents', incidentData);
+    }
+
     await delay(400);
     const user = MOCK_USERS.find(u => u.id === incidentData.userId);
      const attachments: FileAttachment[] = (files || []).map(file => ({
@@ -168,6 +240,10 @@ const addIncident = async(incidentData: Omit<WarehouseItemIncident, 'id'|'timest
 };
 
 const resolveIncident = async(incidentId: string, userId: string, notes?: string): Promise<WarehouseItemIncident> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) {
+        return await apiClient.post<WarehouseItemIncident>(`/warehouse/incidents/${incidentId}/resolve`, { userId, notes });
+    }
+
     await delay(400);
     const index = mockWarehouseIncidents.findIndex(i => i.id === incidentId);
     if (index === -1) throw new Error("Incident not found");
@@ -187,6 +263,12 @@ const resolveIncident = async(incidentId: string, userId: string, notes?: string
 };
 
 const createDiscussionFromWarehouseIncident = async (incident: WarehouseItemIncident, item: WarehouseItem): Promise<DiscussionTopic> => {
+    // This logic sits between domains (Warehouse -> Discussion). 
+    // It should likely be a Discussion Service call initiated by frontend, or a backend orchestration.
+    // Since it creates a Discussion, it should ideally belong to discussionService or be a composite.
+    // Keeping it here for now but using discussionService logic (via Strangler if discussion module is ready) or mock.
+    
+    // Assuming Discussion module is NOT yet real API.
     await delay(500);
     const user = await authService.getCurrentUser();
     if (!user) throw new Error("User not authenticated");
