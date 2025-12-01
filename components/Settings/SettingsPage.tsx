@@ -4,12 +4,13 @@ import Card from '../UI/Card';
 import Input from '../UI/Input';
 import Button from '../UI/Button';
 import { useAuth } from '../../hooks/useAuth';
-import { UserCircleIcon, EnvelopeIcon, LockClosedIcon, BuildingOfficeIcon, SunIcon, MoonIcon, SparklesIcon, FireIcon, ScaleIcon, CheckCircleIcon } from '../UI/Icons';
+import { UserCircleIcon, EnvelopeIcon, LockClosedIcon, BuildingOfficeIcon, SunIcon, MoonIcon, SparklesIcon, FireIcon, ScaleIcon, CheckCircleIcon, ServerIcon } from '../UI/Icons';
 import { apiService } from '../../services/apiService';
 import { CompanyRequisites, Requisites } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAppSettings } from '../../hooks/useAppSettings';
 import ToggleSwitch from '../UI/ToggleSwitch';
+import AdminSettingsTab from './tabs/AdminSettingsTab';
 
 const REQUISITE_FIELDS: (keyof Requisites)[] = [
     'name', 'legalAddress', 'inn', 'ogrn', 'bankAccount', 'bankName', 'bik', 'city', 'correspondentAccount', 'okpo', 'oktmo', 'phone', 'email', 'website'
@@ -32,10 +33,14 @@ const REQUISITE_LABELS: Record<keyof Requisites, string> = {
     website: 'Сайт'
 };
 
+type SettingsTab = 'profile' | 'system' | 'admin';
+
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isAIAssistantEnabled, toggleAIAssistant, systemMode } = useAppSettings();
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -55,6 +60,7 @@ const SettingsPage: React.FC = () => {
   const [requisitesMessage, setRequisitesMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   
   const canManageSystemMode = user?.role === 'ceo' || user?.role === 'manager';
+  const isAdmin = user?.role === 'ceo';
 
   useEffect(() => {
     const fetchRequisites = async () => {
@@ -75,7 +81,6 @@ const SettingsPage: React.FC = () => {
     setProfileMessage(null);
     await new Promise(resolve => setTimeout(resolve, 1000));
     if (name && email) {
-        console.log('Profile updated:', { name, email });
         setProfileMessage({type: 'success', text: 'Профиль успешно обновлен.'});
     } else {
         setProfileMessage({type: 'error', text: 'Ошибка обновления профиля.'});
@@ -149,191 +154,224 @@ const SettingsPage: React.FC = () => {
           setIsProposingModeChange(false);
       }
   };
+  
+  const tabButtonStyle = (tabName: SettingsTab) =>
+    `flex items-center px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ` +
+    (activeTab === tabName
+      ? 'border-brand-primary text-brand-primary bg-brand-surface'
+      : 'border-transparent text-brand-text-secondary hover:text-brand-text-primary hover:border-brand-border');
 
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <h1 className="text-3xl font-semibold text-brand-text-primary">Настройки</h1>
 
-      <Card>
-        <h2 className="text-xl font-semibold text-brand-text-primary border-b border-brand-border pb-2 mb-4">Внешний вид</h2>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant={theme === 'light' ? 'primary' : 'secondary'}
-            onClick={() => setTheme('light')}
-            leftIcon={<SunIcon className="h-5 w-5" />}
-          >
-            Светлая
-          </Button>
-          <Button
-            variant={theme === 'dark' ? 'primary' : 'secondary'}
-            onClick={() => setTheme('dark')}
-            leftIcon={<MoonIcon className="h-5 w-5" />}
-          >
-            Тёмная
-          </Button>
-        </div>
-      </Card>
-
-      <Card>
-        <div className="flex justify-between items-center border-b border-brand-border pb-2 mb-4">
-             <h2 className="text-xl font-semibold text-brand-text-primary flex items-center">
-                <FireIcon className="h-5 w-5 mr-2 text-orange-500"/>
-                Режим Функционирования
-            </h2>
-             <span className={`px-2 py-1 rounded text-xs font-bold ${systemMode === 'mobilization' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                Текущий: {systemMode === 'mobilization' ? 'МОБИЛИЗАЦИЯ' : 'РАЗВИТИЕ'}
-            </span>
-        </div>
-        <div className="space-y-4">
-             <p className="text-sm text-brand-text-secondary">
-                Смена режима требует коллективного решения. Инициируйте голосование в Совете для переключения.
-            </p>
-             {proposalSuccess && (
-                <div className="p-3 bg-emerald-100 text-emerald-700 rounded-md flex items-center animate-fade-in">
-                    <CheckCircleIcon className="h-5 w-5 mr-2"/>
-                    Предложение о смене режима отправлено в Совет.
-                </div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div 
-                    className={`p-4 rounded-lg border-2 transition-all ${systemMode === 'development' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 opacity-100' : 'border-brand-border opacity-60 grayscale hover:grayscale-0 hover:opacity-100 cursor-pointer'}`}
-                    onClick={() => systemMode !== 'development' && canManageSystemMode && handleInitiateModeChange('development')}
-                 >
-                     <div className="flex items-center mb-2">
-                        <ScaleIcon className="h-6 w-6 text-emerald-500 mr-2"/>
-                        <h3 className="font-bold text-brand-text-primary">Режим "Развитие"</h3>
-                     </div>
-                     <p className="text-xs text-brand-text-muted">
-                         Стандартный режим. Приоритет гибкости. Мягкие ограничения.
-                         {systemMode !== 'development' && <span className="block mt-2 text-emerald-600 font-semibold">Нажмите, чтобы предложить переход</span>}
-                     </p>
-                 </div>
-                 
-                 <div 
-                    className={`p-4 rounded-lg border-2 transition-all ${systemMode === 'mobilization' ? 'border-red-500 bg-red-50 dark:bg-red-900/20 opacity-100' : 'border-brand-border opacity-60 grayscale hover:grayscale-0 hover:opacity-100 cursor-pointer'}`}
-                    onClick={() => systemMode !== 'mobilization' && canManageSystemMode && handleInitiateModeChange('mobilization')}
-                 >
-                     <div className="flex items-center mb-2">
-                        <FireIcon className="h-6 w-6 text-red-500 mr-2"/>
-                        <h3 className="font-bold text-brand-text-primary">Режим "Мобилизация"</h3>
-                     </div>
-                     <p className="text-xs text-brand-text-muted">
-                         Кризисный режим. Жесткая блокировка без сырья. Строгий контроль.
-                         {systemMode !== 'mobilization' && <span className="block mt-2 text-red-600 font-semibold">Нажмите, чтобы предложить переход</span>}
-                     </p>
-                 </div>
-            </div>
-            {isProposingModeChange && <p className="text-center text-sm text-brand-text-muted animate-pulse">Создание предложения...</p>}
-        </div>
-      </Card>
-
-      <Card>
-        <h2 className="text-xl font-semibold text-brand-text-primary border-b border-brand-border pb-2 mb-4 flex items-center">
-            <SparklesIcon className="h-5 w-5 mr-2 text-sky-400"/>
-            Интеграции и Функции
-        </h2>
-        <div className="flex items-center justify-between">
-            <div>
-                <h3 className="font-medium text-brand-text-primary">AI Ассистент</h3>
-                <p className="text-xs text-brand-text-muted">Включает плавающий виджет с чатом для помощи в работе с системой.</p>
-            </div>
-            <ToggleSwitch
-                id="ai-assistant-toggle"
-                label={isAIAssistantEnabled ? 'Включен' : 'Выключен'}
-                checked={isAIAssistantEnabled}
-                onChange={toggleAIAssistant}
-            />
-        </div>
-      </Card>
+      <div className="border-b border-brand-border">
+        <nav className="-mb-px flex space-x-2 overflow-x-auto" aria-label="Tabs">
+          <button onClick={() => setActiveTab('profile')} className={tabButtonStyle('profile')}>
+            <UserCircleIcon className="h-5 w-5 mr-2"/> Профиль
+          </button>
+          <button onClick={() => setActiveTab('system')} className={tabButtonStyle('system')}>
+            <CogIcon className="h-5 w-5 mr-2"/> Система
+          </button>
+          {isAdmin && (
+            <button onClick={() => setActiveTab('admin')} className={tabButtonStyle('admin')}>
+              <ServerIcon className="h-5 w-5 mr-2"/> Администрирование
+            </button>
+          )}
+        </nav>
+      </div>
       
-      <Card>
-        <form onSubmit={handleRequisitesSave} className="space-y-6">
-           <h2 className="text-xl font-semibold text-brand-text-primary border-b border-brand-border pb-2">Реквизиты Компании</h2>
-            {requisitesMessage && <p className={`text-sm ${requisitesMessage.type === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>{requisitesMessage.text}</p>}
-            <p className="text-xs text-brand-text-muted">Эти данные будут использоваться для автоматической подстановки в счета, накладные и другие документы.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                 {REQUISITE_FIELDS.map(key => (
-                    <Input
-                        key={String(key)}
-                        id={`company-requisites-${key}`}
-                        name={key as string}
-                        label={REQUISITE_LABELS[key]}
-                        value={companyRequisites[key as keyof CompanyRequisites] || ''}
-                        onChange={handleRequisitesChange}
-                        icon={<BuildingOfficeIcon className="h-5 w-5 text-brand-text-muted"/>}
+      {activeTab === 'admin' && isAdmin && <AdminSettingsTab />}
+
+      {activeTab === 'system' && (
+          <div className="space-y-6">
+            <Card>
+                <h2 className="text-xl font-semibold text-brand-text-primary border-b border-brand-border pb-2 mb-4">Внешний вид</h2>
+                <div className="flex items-center space-x-2">
+                <Button
+                    variant={theme === 'light' ? 'primary' : 'secondary'}
+                    onClick={() => setTheme('light')}
+                    leftIcon={<SunIcon className="h-5 w-5" />}
+                >
+                    Светлая
+                </Button>
+                <Button
+                    variant={theme === 'dark' ? 'primary' : 'secondary'}
+                    onClick={() => setTheme('dark')}
+                    leftIcon={<MoonIcon className="h-5 w-5" />}
+                >
+                    Тёмная
+                </Button>
+                </div>
+            </Card>
+
+            <Card>
+                <div className="flex justify-between items-center border-b border-brand-border pb-2 mb-4">
+                    <h2 className="text-xl font-semibold text-brand-text-primary flex items-center">
+                        <FireIcon className="h-5 w-5 mr-2 text-orange-500"/>
+                        Режим Функционирования
+                    </h2>
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${systemMode === 'mobilization' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                        Текущий: {systemMode === 'mobilization' ? 'МОБИЛИЗАЦИЯ' : 'РАЗВИТИЕ'}
+                    </span>
+                </div>
+                <div className="space-y-4">
+                    <p className="text-sm text-brand-text-secondary">
+                        Смена режима требует коллективного решения. Инициируйте голосование в Совете для переключения.
+                    </p>
+                    {proposalSuccess && (
+                        <div className="p-3 bg-emerald-100 text-emerald-700 rounded-md flex items-center animate-fade-in">
+                            <CheckCircleIcon className="h-5 w-5 mr-2"/>
+                            Предложение о смене режима отправлено в Совет.
+                        </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div 
+                            className={`p-4 rounded-lg border-2 transition-all ${systemMode === 'development' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 opacity-100' : 'border-brand-border opacity-60 grayscale hover:grayscale-0 hover:opacity-100 cursor-pointer'}`}
+                            onClick={() => systemMode !== 'development' && canManageSystemMode && handleInitiateModeChange('development')}
+                        >
+                            <div className="flex items-center mb-2">
+                                <ScaleIcon className="h-6 w-6 text-emerald-500 mr-2"/>
+                                <h3 className="font-bold text-brand-text-primary">Режим "Развитие"</h3>
+                            </div>
+                            <p className="text-xs text-brand-text-muted">
+                                Стандартный режим. Приоритет гибкости. Мягкие ограничения.
+                                {systemMode !== 'development' && <span className="block mt-2 text-emerald-600 font-semibold">Нажмите, чтобы предложить переход</span>}
+                            </p>
+                        </div>
+                        
+                        <div 
+                            className={`p-4 rounded-lg border-2 transition-all ${systemMode === 'mobilization' ? 'border-red-500 bg-red-50 dark:bg-red-900/20 opacity-100' : 'border-brand-border opacity-60 grayscale hover:grayscale-0 hover:opacity-100 cursor-pointer'}`}
+                            onClick={() => systemMode !== 'mobilization' && canManageSystemMode && handleInitiateModeChange('mobilization')}
+                        >
+                            <div className="flex items-center mb-2">
+                                <FireIcon className="h-6 w-6 text-red-500 mr-2"/>
+                                <h3 className="font-bold text-brand-text-primary">Режим "Мобилизация"</h3>
+                            </div>
+                            <p className="text-xs text-brand-text-muted">
+                                Кризисный режим. Жесткая блокировка без сырья. Строгий контроль.
+                                {systemMode !== 'mobilization' && <span className="block mt-2 text-red-600 font-semibold">Нажмите, чтобы предложить переход</span>}
+                            </p>
+                        </div>
+                    </div>
+                    {isProposingModeChange && <p className="text-center text-sm text-brand-text-muted animate-pulse">Создание предложения...</p>}
+                </div>
+            </Card>
+
+            <Card>
+                <h2 className="text-xl font-semibold text-brand-text-primary border-b border-brand-border pb-2 mb-4 flex items-center">
+                    <SparklesIcon className="h-5 w-5 mr-2 text-sky-400"/>
+                    Интеграции и Функции
+                </h2>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="font-medium text-brand-text-primary">AI Ассистент</h3>
+                        <p className="text-xs text-brand-text-muted">Включает плавающий виджет с чатом для помощи в работе с системой.</p>
+                    </div>
+                    <ToggleSwitch
+                        id="ai-assistant-toggle"
+                        label={isAIAssistantEnabled ? 'Включен' : 'Выключен'}
+                        checked={isAIAssistantEnabled}
+                        onChange={toggleAIAssistant}
                     />
-                ))}
-            </div>
-             <div className="flex justify-end">
-                <Button type="submit" isLoading={isSavingRequisites}>Сохранить реквизиты</Button>
-            </div>
-        </form>
-      </Card>
-
-      <Card>
-        <form onSubmit={handleProfileSave} className="space-y-6">
-          <h2 className="text-xl font-semibold text-brand-text-primary border-b border-brand-border pb-2">Профиль пользователя</h2>
-          {profileMessage && <p className={`text-sm ${profileMessage.type === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>{profileMessage.text}</p>}
-          <Input
-            id="name"
-            label="Имя"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            icon={<UserCircleIcon className="h-5 w-5 text-brand-text-muted"/>}
-          />
-          <Input
-            id="email"
-            label="Электронная почта"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            icon={<EnvelopeIcon className="h-5 w-5 text-brand-text-muted"/>}
-            disabled // Typically email is not changed or requires verification
-          />
-          <div className="flex justify-end">
-            <Button type="submit" isLoading={isSavingProfile}>Сохранить профиль</Button>
+                </div>
+            </Card>
+            
+            <Card>
+                <form onSubmit={handleRequisitesSave} className="space-y-6">
+                <h2 className="text-xl font-semibold text-brand-text-primary border-b border-brand-border pb-2">Реквизиты Компании</h2>
+                    {requisitesMessage && <p className={`text-sm ${requisitesMessage.type === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>{requisitesMessage.text}</p>}
+                    <p className="text-xs text-brand-text-muted">Эти данные будут использоваться для автоматической подстановки в счета, накладные и другие документы.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        {REQUISITE_FIELDS.map(key => (
+                            <Input
+                                key={String(key)}
+                                id={`company-requisites-${key}`}
+                                name={key as string}
+                                label={REQUISITE_LABELS[key]}
+                                value={companyRequisites[key as keyof CompanyRequisites] || ''}
+                                onChange={handleRequisitesChange}
+                                icon={<BuildingOfficeIcon className="h-5 w-5 text-brand-text-muted"/>}
+                            />
+                        ))}
+                    </div>
+                    <div className="flex justify-end">
+                        <Button type="submit" isLoading={isSavingRequisites}>Сохранить реквизиты</Button>
+                    </div>
+                </form>
+            </Card>
           </div>
-        </form>
-      </Card>
+      )}
 
-      <Card>
-        <form onSubmit={handlePasswordChange} className="space-y-6">
-          <h2 className="text-xl font-semibold text-brand-text-primary border-b border-brand-border pb-2">Изменить пароль</h2>
-          {passwordMessage && <p className={`text-sm ${passwordMessage.type === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>{passwordMessage.text}</p>}
-          <Input
-            id="currentPassword"
-            label="Текущий пароль"
-            type="password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            icon={<LockClosedIcon className="h-5 w-5 text-brand-text-muted"/>}
-          />
-          <Input
-            id="newPassword"
-            label="Новый пароль"
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            icon={<LockClosedIcon className="h-5 w-5 text-brand-text-muted"/>}
-          />
-          <Input
-            id="confirmNewPassword"
-            label="Подтвердите новый пароль"
-            type="password"
-            value={confirmNewPassword}
-            onChange={(e) => setConfirmNewPassword(e.target.value)}
-            icon={<LockClosedIcon className="h-5 w-5 text-brand-text-muted"/>}
-          />
-          <div className="flex justify-end">
-            <Button type="submit" isLoading={isSavingPassword}>Изменить пароль</Button>
-          </div>
-        </form>
-      </Card>
+      {activeTab === 'profile' && (
+        <div className="space-y-6">
+            <Card>
+                <form onSubmit={handleProfileSave} className="space-y-6">
+                <h2 className="text-xl font-semibold text-brand-text-primary border-b border-brand-border pb-2">Профиль пользователя</h2>
+                {profileMessage && <p className={`text-sm ${profileMessage.type === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>{profileMessage.text}</p>}
+                <Input
+                    id="name"
+                    label="Имя"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    icon={<UserCircleIcon className="h-5 w-5 text-brand-text-muted"/>}
+                />
+                <Input
+                    id="email"
+                    label="Электронная почта"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    icon={<EnvelopeIcon className="h-5 w-5 text-brand-text-muted"/>}
+                    disabled // Typically email is not changed or requires verification
+                />
+                <div className="flex justify-end">
+                    <Button type="submit" isLoading={isSavingProfile}>Сохранить профиль</Button>
+                </div>
+                </form>
+            </Card>
+
+            <Card>
+                <form onSubmit={handlePasswordChange} className="space-y-6">
+                <h2 className="text-xl font-semibold text-brand-text-primary border-b border-brand-border pb-2">Изменить пароль</h2>
+                {passwordMessage && <p className={`text-sm ${passwordMessage.type === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>{passwordMessage.text}</p>}
+                <Input
+                    id="currentPassword"
+                    label="Текущий пароль"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    icon={<LockClosedIcon className="h-5 w-5 text-brand-text-muted"/>}
+                />
+                <Input
+                    id="newPassword"
+                    label="Новый пароль"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    icon={<LockClosedIcon className="h-5 w-5 text-brand-text-muted"/>}
+                />
+                <Input
+                    id="confirmNewPassword"
+                    label="Подтвердите новый пароль"
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    icon={<LockClosedIcon className="h-5 w-5 text-brand-text-muted"/>}
+                />
+                <div className="flex justify-end">
+                    <Button type="submit" isLoading={isSavingPassword}>Изменить пароль</Button>
+                </div>
+                </form>
+            </Card>
+        </div>
+      )}
       
     </div>
   );
 };
 
 export default SettingsPage;
+import { CogIcon } from '../UI/Icons';

@@ -26,6 +26,7 @@ import { councilService } from './api/councilService';
 import { analyticsService } from './api/analyticsService';
 import { qualityService } from './api/qualityService';
 import { searchService } from './api/searchService';
+import { adminService } from './api/adminService';
 
 export const apiService = {
     ...contactApi,
@@ -55,4 +56,5 @@ export const apiService = {
     ...analyticsService,
     ...qualityService,
     ...searchService,
+    ...adminService,
 };
