@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar'; 
 import { useLocation } from 'react-router-dom';
@@ -8,6 +8,7 @@ import MobileHomePage from './MobileHomePage';
 import { ROUTE_PATHS } from '../constants';
 import AIAssistantButton from './AIAssistant/AIAssistantButton';
 import AIAssistantModal from './AIAssistant/AIAssistantModal';
+import GlobalSearchModal from './GlobalSearch/GlobalSearchModal';
 import { useAppSettings } from '../hooks/useAppSettings';
 
 interface LayoutProps {
@@ -15,7 +16,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { isMobileView } = useView();
+  const { isMobileView, openGlobalSearch, isGlobalSearchOpen } = useView();
   const { isAIAssistantEnabled } = useAppSettings();
   const location = useLocation();
   
@@ -23,6 +24,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   if (location.pathname === ROUTE_PATHS.LOGIN) {
     return <>{children}</>;
   }
+
+  // Global Keyboard Shortcut for Search
+  useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+              e.preventDefault();
+              openGlobalSearch();
+          }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [openGlobalSearch]);
+
 
   return (
     <div className="flex h-screen bg-brand-background text-brand-text-primary">
@@ -39,6 +53,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           )}
         </main>
       </div>
+      
+      <GlobalSearchModal />
+
       {isAIAssistantEnabled && (
         <>
           <AIAssistantButton />

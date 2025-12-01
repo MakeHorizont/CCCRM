@@ -1,15 +1,17 @@
 
 // services/api/equipmentService.ts
-import { EquipmentItem, EquipmentStatus, StorageLocation } from '../../types';
+import { EquipmentItem, EquipmentStatus, StorageLocation, MaintenanceRecord } from '../../types';
 import { mockEquipment } from '../mockData/equipment';
-import { mockStorageLocations } from '../mockData/storageLocations'; // Import mock data directly
+import { mockStorageLocations } from '../mockData/storageLocations';
+import { mockTransactions } from '../mockData/transactions';
 import { delay, deepCopy } from './utils';
 import { generateId } from '../../utils/idGenerators';
 import { API_CONFIG } from './config';
 import { apiClient } from '../apiClient';
+import { systemService } from './systemService';
 
 const getEquipmentItems = async (filters: { searchTerm?: string, viewMode?: 'active' | 'archived' | 'all' }): Promise<EquipmentItem[]> => {
-    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) { // Assuming equipment is part of warehouse module context or has its own
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.WAREHOUSE) { 
          try {
             return await apiClient.get<EquipmentItem[]>('/equipment', {
                 search: filters.searchTerm,
@@ -47,6 +49,7 @@ const addEquipmentItem = async (data: Omit<EquipmentItem, 'id' | 'isArchived' | 
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         status: 'operational',
+        maintenanceHistory: [],
     };
     mockEquipment.push(newItem);
 
@@ -129,9 +132,10 @@ const duplicateEquipmentItem = async (id: string): Promise<EquipmentItem> => {
         name: newName,
         status: 'operational',
         currentProductionOrderId: null,
-        isStorageLocation: false, // Duplicates are not storages by default
+        isStorageLocation: false,
+        maintenanceHistory: [],
+        nextMaintenanceDate: undefined
     };
-    // The add function will handle creating a new ID and timestamps
     return addEquipmentItem(newItemData);
 };
 
@@ -147,7 +151,6 @@ const archiveEquipmentItem = async (id: string, archive: boolean): Promise<{ suc
     mockEquipment[index].isArchived = archive;
     mockEquipment[index].archivedAt = archive ? new Date().toISOString() : undefined;
     
-    // Also archive the corresponding storage location
     const storageIndex = mockStorageLocations.findIndex(loc => loc.equipmentId === id);
     if (storageIndex !== -1) {
         mockStorageLocations[storageIndex].isArchived = archive;
@@ -167,7 +170,6 @@ const deleteEquipmentItem = async (id: string): Promise<{ success: true }> => {
     const index = mockEquipment.findIndex(e => e.id === id);
     if (index > -1 && mockEquipment[index].isArchived) {
         mockEquipment.splice(index, 1);
-        // Also delete the corresponding storage location
         const storageIndex = mockStorageLocations.findIndex(loc => loc.equipmentId === id);
         if (storageIndex > -1) {
             mockStorageLocations.splice(storageIndex, 1);
@@ -178,6 +180,73 @@ const deleteEquipmentItem = async (id: string): Promise<{ success: true }> => {
     throw new Error("Equipment must be archived before deletion");
 };
 
+const performMaintenance = async (id: string, recordData: Omit<MaintenanceRecord, 'id'>): Promise<EquipmentItem> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.MAINTENANCE) {
+        return await apiClient.post<EquipmentItem>(`/maintenance/equipment/${id}/records`, recordData);
+    }
+
+    await delay(400);
+    const index = mockEquipment.findIndex(e => e.id === id);
+    if (index === -1) throw new Error("Equipment not found");
+    
+    const equipment = mockEquipment[index];
+    
+    // 1. Create Log Record
+    const newRecord: MaintenanceRecord = {
+        ...recordData,
+        id: generateId('maint'),
+    };
+    
+    if (!equipment.maintenanceHistory) equipment.maintenanceHistory = [];
+    equipment.maintenanceHistory.unshift(newRecord);
+    
+    // 2. Update Status
+    // If it was broken or in maintenance, and we perform repair/routine, assume it works now
+    if (equipment.status === 'broken' || equipment.status === 'maintenance') {
+        equipment.status = 'operational';
+    }
+    
+    // 3. Calculate Next Date
+    if (equipment.maintenanceIntervalDays) {
+        const lastDate = new Date(newRecord.date);
+        const nextDate = new Date(lastDate.setDate(lastDate.getDate() + equipment.maintenanceIntervalDays));
+        equipment.nextMaintenanceDate = nextDate.toISOString().split('T')[0];
+    } else {
+        // Or clear if no interval set
+        // equipment.nextMaintenanceDate = undefined; 
+    }
+    
+    // 4. Create Financial Transaction if cost > 0
+    if (newRecord.cost > 0) {
+         mockTransactions.unshift({
+            id: generateId('txn'),
+            date: new Date().toISOString().split('T')[0],
+            type: 'expense',
+            amount: newRecord.cost,
+            description: `Обслуживание оборудования: ${equipment.name} (${newRecord.type})`,
+            category: 'Ремонт и обслуживание',
+            isTaxDeductible: true,
+            relatedEquipmentId: equipment.id,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isArchived: false,
+        });
+    }
+    
+    equipment.updatedAt = new Date().toISOString();
+    mockEquipment[index] = equipment;
+    
+    await systemService.logEvent(
+        'Обслуживание оборудования',
+        `Проведено ${newRecord.type} для "${equipment.name}". Стоимость: ${newRecord.cost}. Техник: ${newRecord.technician}`,
+        'production',
+        equipment.id,
+        'EquipmentItem'
+    );
+
+    return deepCopy(equipment);
+};
+
 export const equipmentService = {
     getEquipmentItems,
     addEquipmentItem,
@@ -185,4 +254,5 @@ export const equipmentService = {
     duplicateEquipmentItem,
     archiveEquipmentItem,
     deleteEquipmentItem,
+    performMaintenance,
 };

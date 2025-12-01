@@ -124,3 +124,16 @@ export interface PurchaseRequest {
   archivedAt?: string;
 }
 export type SortablePurchaseRequestKeys = 'name' | 'status' | 'createdAt';
+
+export interface ShiftHandover {
+  id: string;
+  timestamp: string;
+  outgoingUserId: string;
+  outgoingUserName: string;
+  notes: string;
+  issuesFlagged: boolean;
+  cleanlinessChecked: boolean;
+  equipmentChecked: boolean;
+  acceptedByUserId?: string;
+  acceptedAt?: string;
+}

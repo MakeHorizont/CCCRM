@@ -1,6 +1,7 @@
+
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { MenuItem } from '../constants'; // Assuming MenuItem is exported and suitable
-import { MENU_ITEMS_FOR_MOBILE_NAV, MobileNavItemConfig } from '../constants'; // Import new constant
+import { MenuItem } from '../constants'; 
+import { MENU_ITEMS_FOR_MOBILE_NAV, MobileNavItemConfig } from '../constants'; 
 
 interface ViewContextType {
   isMobileView: boolean;
@@ -11,6 +12,11 @@ interface ViewContextType {
   isMobileNavLocked: boolean;
   toggleMobileNavLock: () => void;
   resetMobileNavSettings: () => void;
+  
+  // Global Search
+  isGlobalSearchOpen: boolean;
+  openGlobalSearch: () => void;
+  closeGlobalSearch: () => void;
 }
 
 export const ViewContext = createContext<ViewContextType | undefined>(undefined);
@@ -38,6 +44,9 @@ export const ViewProvider: React.FC<ViewProviderProps> = ({ children }) => {
   
   const [mobileNavItemsConfig, setMobileNavItemsConfigState] = useState<MobileNavItemConfig[]>([]);
   const [isMobileNavLocked, setIsMobileNavLockedState] = useState<boolean>(false);
+
+  // Global Search State
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 
   useEffect(() => {
     const storedViewMode = localStorage.getItem('ccrmViewMode');
@@ -122,6 +131,9 @@ export const ViewProvider: React.FC<ViewProviderProps> = ({ children }) => {
     setIsMobileNavLockedState(false);
     localStorage.setItem('ccrmMobileNavLocked', 'false');
   }, []);
+  
+  const openGlobalSearch = useCallback(() => setIsGlobalSearchOpen(true), []);
+  const closeGlobalSearch = useCallback(() => setIsGlobalSearchOpen(false), []);
 
 
   return (
@@ -133,7 +145,10 @@ export const ViewProvider: React.FC<ViewProviderProps> = ({ children }) => {
         setMobileNavItemsConfig,
         isMobileNavLocked,
         toggleMobileNavLock,
-        resetMobileNavSettings
+        resetMobileNavSettings,
+        isGlobalSearchOpen,
+        openGlobalSearch,
+        closeGlobalSearch
     }}>
       {children}
     </ViewContext.Provider>

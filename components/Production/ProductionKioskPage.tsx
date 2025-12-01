@@ -3,10 +3,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { apiService } from '../../services/apiService';
-import { ProductionOrder, ProductionOrderItem, WarehouseItemIncident, DailyStats } from '../../types';
+import { ProductionOrder, ProductionOrderItem, WarehouseItemIncident, DailyStats, ShiftHandover } from '../../types';
 import Button from '../UI/Button';
 import LoadingSpinner from '../UI/LoadingSpinner';
-import { ArrowLeftIcon, PlayCircleIcon, CheckCircleIcon, ClockIcon, UserCircleIcon, ExclamationTriangleIcon, XCircleIcon, BanknotesIcon, FireIcon } from '../UI/Icons';
+import { ArrowLeftIcon, PlayCircleIcon, CheckCircleIcon, ClockIcon, UserCircleIcon, ExclamationTriangleIcon, XCircleIcon, BanknotesIcon, FireIcon, ClipboardDocumentListIcon } from '../UI/Icons';
 import { ROUTE_PATHS, PRODUCTION_ORDER_STATUS_COLOR_MAP } from '../../constants';
 import ProductionRunModal from './ProductionRunModal'; 
 import Modal from '../UI/Modal';
@@ -31,6 +31,14 @@ const ProductionKioskPage: React.FC = () => {
     const [incidentType, setIncidentType] = useState<WarehouseItemIncident['type']>('damage');
     const [incidentDescription, setIncidentDescription] = useState('');
     const [isReportingIncident, setIsReportingIncident] = useState(false);
+    
+    // Shift Handover State
+    const [isHandoverModalOpen, setIsHandoverModalOpen] = useState(false); // For ending shift
+    const [isHandoverBriefingOpen, setIsHandoverBriefingOpen] = useState(false); // For starting shift
+    const [lastHandover, setLastHandover] = useState<ShiftHandover | null>(null);
+    const [handoverData, setHandoverData] = useState<Partial<ShiftHandover>>({
+        notes: '', issuesFlagged: false, cleanlinessChecked: false, equipmentChecked: false
+    });
     
     // Shift Timer
     const [elapsedTime, setElapsedTime] = useState<string>('00:00');
@@ -81,26 +89,61 @@ const ProductionKioskPage: React.FC = () => {
         }
     }, [dailyStats]);
 
-
-    const handleStartShift = async () => {
-        if (!user) return;
+    const handleStartShiftInitiate = async () => {
         setIsClocking(true);
         try {
-            await apiService.startWorkShift(user.id);
-            await fetchKioskData();
+            // Check for previous handover
+            const lastHO = await apiService.getLastShiftHandover();
+            if (lastHO && !lastHO.acceptedAt) {
+                setLastHandover(lastHO);
+                setIsHandoverBriefingOpen(true); // Show briefing first
+            } else {
+                // No handover to accept, just start
+                await handleStartShiftConfirm();
+            }
         } catch (err) {
-            alert((err as Error).message);
+            console.error("Failed to check handover", err);
+            // If error, fallback to normal start
+            await handleStartShiftConfirm();
         } finally {
             setIsClocking(false);
         }
     };
 
-    const handleEndShift = async () => {
+    const handleStartShiftConfirm = async () => {
         if (!user) return;
-        if(!confirm("Вы уверены, что хотите завершить смену?")) return;
+        try {
+            await apiService.startWorkShift(user.id);
+            setIsHandoverBriefingOpen(false);
+            await fetchKioskData();
+        } catch (err) {
+            alert((err as Error).message);
+        }
+    };
+
+    const handleEndShiftInitiate = () => {
+        // Open Handover form
+        setHandoverData({ notes: '', issuesFlagged: false, cleanlinessChecked: false, equipmentChecked: false });
+        setIsHandoverModalOpen(true);
+    };
+
+    const handleEndShiftConfirm = async () => {
+        if (!user) return;
         setIsClocking(true);
         try {
+            // 1. Create Handover Record
+            await apiService.createShiftHandover({
+                outgoingUserId: user.id,
+                outgoingUserName: user.name || user.email,
+                notes: handoverData.notes || 'Смена сдана без примечаний.',
+                issuesFlagged: handoverData.issuesFlagged || false,
+                cleanlinessChecked: handoverData.cleanlinessChecked || false,
+                equipmentChecked: handoverData.equipmentChecked || false,
+            });
+
+            // 2. End Shift
             await apiService.endWorkShift(user.id);
+            setIsHandoverModalOpen(false);
             await fetchKioskData();
         } catch (err) {
             alert((err as Error).message);
@@ -186,7 +229,7 @@ const ProductionKioskPage: React.FC = () => {
 
                     {!isShiftActive ? (
                         <button 
-                            onClick={handleStartShift} 
+                            onClick={handleStartShiftInitiate} 
                             disabled={isClocking}
                             className="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-3 px-8 rounded-xl text-xl shadow-lg transform active:scale-95 transition-all flex items-center"
                         >
@@ -195,7 +238,7 @@ const ProductionKioskPage: React.FC = () => {
                         </button>
                     ) : (
                          <button 
-                            onClick={handleEndShift} 
+                            onClick={handleEndShiftInitiate} 
                             disabled={isClocking}
                             className="bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold py-3 px-8 rounded-xl text-xl shadow-lg transform active:scale-95 transition-all flex items-center"
                         >
@@ -324,6 +367,98 @@ const ProductionKioskPage: React.FC = () => {
                     </form>
                 </Modal>
             )}
+            
+            {/* Shift Handover Creation Modal */}
+            {isHandoverModalOpen && (
+                <Modal isOpen={isHandoverModalOpen} onClose={() => setIsHandoverModalOpen(false)} title="Передача Смены" zIndex="z-[100]" size="lg">
+                     <div className="space-y-6 p-2">
+                        <p className="text-brand-text-secondary">Заполните отчет для следующей смены. Это обязательно для завершения работы.</p>
+                        
+                        <div className="space-y-3">
+                             <div className="flex items-center p-4 bg-brand-card rounded-xl border border-brand-border">
+                                <input 
+                                    type="checkbox" 
+                                    id="ho-cleanliness" 
+                                    className="w-6 h-6 text-emerald-500 rounded focus:ring-emerald-500 cursor-pointer"
+                                    checked={handoverData.cleanlinessChecked}
+                                    onChange={e => setHandoverData(prev => ({...prev, cleanlinessChecked: e.target.checked}))}
+                                />
+                                <label htmlFor="ho-cleanliness" className="ml-4 text-lg font-medium cursor-pointer select-none">Рабочее место убрано (Чистота)</label>
+                             </div>
+                             <div className="flex items-center p-4 bg-brand-card rounded-xl border border-brand-border">
+                                <input 
+                                    type="checkbox" 
+                                    id="ho-equipment" 
+                                    className="w-6 h-6 text-emerald-500 rounded focus:ring-emerald-500 cursor-pointer"
+                                    checked={handoverData.equipmentChecked}
+                                    onChange={e => setHandoverData(prev => ({...prev, equipmentChecked: e.target.checked}))}
+                                />
+                                <label htmlFor="ho-equipment" className="ml-4 text-lg font-medium cursor-pointer select-none">Оборудование выключено/исправно</label>
+                             </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-lg font-bold text-brand-text-primary mb-2">Заметки для сменщика</label>
+                            <textarea 
+                                value={handoverData.notes} 
+                                onChange={e => setHandoverData(prev => ({...prev, notes: e.target.value}))}
+                                className="w-full p-4 text-lg bg-brand-card border border-brand-border rounded-xl h-32 focus:ring-2 focus:ring-sky-500"
+                                placeholder="Например: 'Замочил сою в 18:00', 'Барахлит запайщик'..."
+                            />
+                        </div>
+
+                        <div className="flex justify-end gap-4 pt-4">
+                            <Button type="button" variant="secondary" size="lg" onClick={() => setIsHandoverModalOpen(false)} disabled={isClocking}>Отмена</Button>
+                            <Button 
+                                onClick={handleEndShiftConfirm} 
+                                size="lg" 
+                                isLoading={isClocking} 
+                                disabled={!handoverData.cleanlinessChecked || !handoverData.equipmentChecked}
+                                className={!handoverData.cleanlinessChecked || !handoverData.equipmentChecked ? 'opacity-50' : 'bg-red-600 hover:bg-red-500 text-white'}
+                            >
+                                Сдать смену
+                            </Button>
+                        </div>
+                     </div>
+                </Modal>
+            )}
+
+             {/* Shift Briefing Modal */}
+             {isHandoverBriefingOpen && lastHandover && (
+                <Modal isOpen={isHandoverBriefingOpen} onClose={() => setIsHandoverBriefingOpen(false)} title="Прием Смены" zIndex="z-[100]" size="lg">
+                    <div className="space-y-6 p-2">
+                        <div className="bg-brand-secondary p-4 rounded-xl border-l-4 border-sky-500">
+                            <h3 className="text-sm text-brand-text-muted mb-1 uppercase tracking-wider">Предыдущая смена</h3>
+                            <p className="text-xl font-bold text-brand-text-primary">{lastHandover.outgoingUserName}</p>
+                            <p className="text-sm opacity-70">{new Date(lastHandover.timestamp).toLocaleString('ru-RU')}</p>
+                        </div>
+                        
+                        <div className="space-y-2">
+                             <h3 className="text-lg font-bold text-brand-text-primary">Отчет:</h3>
+                             <div className="p-4 bg-brand-card rounded-xl border border-brand-border text-lg whitespace-pre-wrap">
+                                 {lastHandover.notes}
+                             </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                             <div className={`p-3 rounded-lg border ${lastHandover.cleanlinessChecked ? 'bg-emerald-900/20 border-emerald-700 text-emerald-400' : 'bg-red-900/20 border-red-700 text-red-400'}`}>
+                                 {lastHandover.cleanlinessChecked ? 'Чистота: OK' : 'Чистота: НЕ ПРОВЕРЕНО'}
+                             </div>
+                             <div className={`p-3 rounded-lg border ${lastHandover.equipmentChecked ? 'bg-emerald-900/20 border-emerald-700 text-emerald-400' : 'bg-red-900/20 border-red-700 text-red-400'}`}>
+                                 {lastHandover.equipmentChecked ? 'Оборудование: OK' : 'Оборудование: НЕ ПРОВЕРЕНО'}
+                             </div>
+                        </div>
+
+                        <div className="flex justify-end gap-4 pt-4">
+                            <Button type="button" variant="secondary" size="lg" onClick={() => setIsHandoverBriefingOpen(false)}>Отмена</Button>
+                            <Button onClick={handleStartShiftConfirm} size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white" leftIcon={<ClipboardDocumentListIcon className="h-6 w-6"/>}>
+                                Принять и Начать
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
         </div>
     );
 };

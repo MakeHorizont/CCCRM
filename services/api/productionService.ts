@@ -1,6 +1,6 @@
 
 // services/api/productionService.ts
-import { ProductionOrder, ProductionOrderStatus, TechnologyCard, ProductionRunStep, HouseholdItem } from '../../types';
+import { ProductionOrder, ProductionOrderStatus, TechnologyCard, ProductionRunStep, HouseholdItem, ShiftHandover } from '../../types';
 import { mockProductionOrders } from '../mockData/productionOrders';
 import { mockTechnologyCards } from '../mockData/technologyCards';
 import { mockHouseholdItems } from '../mockData/householdItems';
@@ -15,6 +15,9 @@ import { generateId } from '../../utils/idGenerators';
 import { systemService } from './systemService'; // Import Audit Log service
 import { API_CONFIG } from './config';
 import { apiClient } from '../apiClient';
+
+// In-memory storage for mock handovers
+let mockShiftHandovers: ShiftHandover[] = [];
 
 export const checkProductionOrderMaterialShortage = (po: ProductionOrder): boolean => {
     let hasShortage = false;
@@ -540,6 +543,32 @@ const updateProductionRunStep = async (orderId: string, orderItemId: string, ste
     return deepCopy(mockProductionOrders[poIndex]);
 };
 
+const createShiftHandover = async (data: Omit<ShiftHandover, 'id' | 'timestamp' | 'acceptedByUserId' | 'acceptedAt'>): Promise<ShiftHandover> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        return await apiClient.post<ShiftHandover>('/production/handovers', data);
+    }
+    
+    await delay(400);
+    const newHandover: ShiftHandover = {
+        ...data,
+        id: generateId('ho'),
+        timestamp: new Date().toISOString()
+    };
+    mockShiftHandovers.unshift(newHandover); // Add to beginning
+    return deepCopy(newHandover);
+};
+
+const getLastShiftHandover = async (): Promise<ShiftHandover | null> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        return await apiClient.get<ShiftHandover>('/production/handovers/last');
+    }
+
+    await delay(200);
+    if (mockShiftHandovers.length === 0) return null;
+    // Return the most recent one
+    return deepCopy(mockShiftHandovers[0]);
+};
+
 export const productionService = {
     getProductionOrders,
     addProductionOrder,
@@ -554,4 +583,6 @@ export const productionService = {
     deleteTechnologyCard,
     updateProductionRunStep,
     checkProductionOrderMaterialShortage,
+    createShiftHandover,
+    getLastShiftHandover,
 };

@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { DevicePhoneMobileIcon, ComputerDesktopIcon, Cog8ToothIcon, ArrowLeftIcon, SunIcon, MoonIcon, FireIcon } from './UI/Icons';
+import { DevicePhoneMobileIcon, ComputerDesktopIcon, Cog8ToothIcon, ArrowLeftIcon, SunIcon, MoonIcon, FireIcon, MagnifyingGlassIcon } from './UI/Icons';
 import { useView } from '../hooks/useView';
 import { useTheme } from '../contexts/ThemeContext';
 import Tooltip from './UI/Tooltip';
@@ -17,7 +18,7 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = () => {
   const { user } = useAuth();
-  const { isMobileView, toggleViewMode } = useView();
+  const { isMobileView, toggleViewMode, openGlobalSearch } = useView();
   const { theme, setTheme } = useTheme();
   const { systemMode } = useAppSettings();
   const [isMobileNavSettingsModalOpen, setIsMobileNavSettingsModalOpen] = useState(false);
@@ -70,6 +71,17 @@ const Navbar: React.FC<NavbarProps> = () => {
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Global Search Trigger */}
+          <Tooltip text="Поиск (Ctrl+K)" position="bottom">
+              <button
+                  onClick={openGlobalSearch}
+                  className="p-2 rounded-md text-brand-text-secondary hover:text-brand-text-primary hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  aria-label="Поиск"
+              >
+                  <MagnifyingGlassIcon className="h-5 w-5" />
+              </button>
+          </Tooltip>
+
           {isMobileView && (
             <Tooltip text="Настройки мобильного меню" position="bottom">
               <button

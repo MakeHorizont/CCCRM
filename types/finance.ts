@@ -27,6 +27,7 @@ export interface Transaction {
   relatedContactId?: string | null;
   relatedPurchaseRequestId?: string | null;
   relatedProductionOrderId?: string | null;
+  relatedEquipmentId?: string | null; // Added for maintenance costs
   createdAt: string;
   updatedAt: string;
   isArchived: boolean;
@@ -63,6 +64,16 @@ export interface EquipmentAmortization {
 
 export type EquipmentStatus = 'operational' | 'in_use' | 'maintenance' | 'broken';
 
+export interface MaintenanceRecord {
+  id: string;
+  date: string;
+  type: 'routine' | 'repair' | 'inspection';
+  description: string;
+  cost: number;
+  technician: string;
+  nextScheduledDate?: string;
+}
+
 export interface EquipmentItem {
   id: string;
   name: string;
@@ -84,6 +95,11 @@ export interface EquipmentItem {
   status?: EquipmentStatus;
   currentProductionOrderId?: string | null;
   isStorageLocation?: boolean;
+  
+  // Lean Production / Maintenance
+  maintenanceIntervalDays?: number; // Frequency of routine checkups in days
+  nextMaintenanceDate?: string;
+  maintenanceHistory?: MaintenanceRecord[];
 }
 export type SortableEquipmentKeys = 'name' | 'category' | 'cost' | 'amortizationPercentage' | 'status';
 
