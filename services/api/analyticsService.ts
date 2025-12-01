@@ -1,8 +1,10 @@
 
-import { ProductionOrder, ProductionOrderItem } from '../../types';
+import { ProductionOrder, ProductionOrderItem, User } from '../../types';
 import { mockProductionOrders } from '../mockData/productionOrders';
 import { mockWarehouseItems } from '../mockData/warehouseItems';
 import { mockWarehouseIncidents } from '../mockData/warehouseIncidents';
+import { MOCK_USERS } from '../mockData/users';
+import { mockDiscussions } from '../mockData/discussions';
 import { delay, deepCopy } from './utils';
 
 interface ProductionTrend {
@@ -22,6 +24,20 @@ interface ProductEfficiency {
     productName: string;
     totalProduced: number;
     avgBatchEfficiency: number; // produced / planned %
+}
+
+interface LaborTrend {
+    month: string;
+    avgKtu: number;
+    safetyIncidents: number;
+    rationalizationCount: number;
+}
+
+interface TopRationalizer {
+    id: string;
+    name: string;
+    acceptedProposals: number;
+    totalEconomy: number;
 }
 
 const getProductionVolumeTrend = async (days = 30): Promise<ProductionTrend[]> => {
@@ -119,8 +135,66 @@ const getUnitCostTrend = async (productId: string): Promise<CostTrend[]> => {
     }).sort((a,b) => a.date.localeCompare(b.date));
 };
 
+const getLaborStats = async (): Promise<{ trends: LaborTrend[], topRationalizers: TopRationalizer[] }> => {
+    await delay(600);
+    
+    // 1. Calculate Trends (Mocking last 6 months)
+    const trends: LaborTrend[] = [];
+    const today = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const monthName = d.toLocaleDateString('ru-RU', { month: 'short' });
+        
+        // Fake data generation based on mock events/users to look realistic
+        // In real app, this queries aggregated historical tables
+        
+        // KTU: Average of current users (with some random variance for history)
+        const avgKtuBase = MOCK_USERS.reduce((sum, u) => sum + (u.currentMonthKTU?.total || 1.0), 0) / MOCK_USERS.length;
+        const variance = (Math.random() - 0.5) * 0.2;
+        
+        // Safety: Count incidents in that month
+        const incidentsCount = mockWarehouseIncidents.filter(inc => {
+            const incDate = new Date(inc.timestamp);
+            return incDate.getMonth() === d.getMonth() && incDate.getFullYear() === d.getFullYear() && (inc.type === 'damage' || inc.type === 'defect');
+        }).length;
+
+        // Rationalization: Count topics created
+        const ratCount = mockDiscussions.filter(t => {
+            const tDate = new Date(t.createdAt);
+            return t.type === 'rationalization' && tDate.getMonth() === d.getMonth() && tDate.getFullYear() === d.getFullYear();
+        }).length;
+
+        trends.push({
+            month: monthName,
+            avgKtu: parseFloat((avgKtuBase + variance).toFixed(2)),
+            safetyIncidents: incidentsCount,
+            rationalizationCount: ratCount
+        });
+    }
+
+    // 2. Top Rationalizers
+    const rationalizersMap = new Map<string, TopRationalizer>();
+    mockDiscussions.forEach(t => {
+        if (t.type === 'rationalization' && t.rationalization?.status === 'implemented') {
+            if (!rationalizersMap.has(t.authorId)) {
+                rationalizersMap.set(t.authorId, { id: t.authorId, name: t.authorName || 'Unknown', acceptedProposals: 0, totalEconomy: 0 });
+            }
+            const entry = rationalizersMap.get(t.authorId)!;
+            entry.acceptedProposals++;
+            entry.totalEconomy += (t.rationalization.actualEconomy || 0);
+        }
+    });
+
+    const topRationalizers = Array.from(rationalizersMap.values()).sort((a, b) => b.totalEconomy - a.totalEconomy);
+
+    return { trends, topRationalizers };
+};
+
 export const analyticsService = {
     getProductionVolumeTrend,
     getProductEfficiencyAnalysis,
     getUnitCostTrend,
+    getLaborStats,
 };

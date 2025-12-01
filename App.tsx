@@ -44,7 +44,8 @@ import EquipmentListPage from './components/Equipment/EquipmentListPage';
 import EquipmentEditorPage from './components/Equipment/EquipmentEditorPage';
 import AuditLogPage from './components/System/AuditLogPage'; 
 import CouncilPage from './components/Council/CouncilPage';
-import AnalyticsPage from './components/Analytics/AnalyticsPage'; // New Import
+import AnalyticsPage from './components/Analytics/AnalyticsPage'; 
+import QualityControlPage from './components/Quality/QualityControlPage'; // New Import
 
 import { useAuth } from './hooks/useAuth';
 import { ROUTE_PATHS } from './constants';
@@ -127,8 +128,11 @@ const App: React.FC = () => {
               <Routes>
                 <Route path={ROUTE_PATHS.DASHBOARD.substring(1)} element={<DashboardComponent />} />
                 
-                {/* Analytics Route - New */}
+                {/* Analytics Route */}
                 <Route path={ROUTE_PATHS.ANALYTICS.substring(1)} element={<AnalyticsPage />} />
+
+                {/* Quality Control Route */}
+                <Route path={ROUTE_PATHS.QUALITY_CONTROL.substring(1)} element={<QualityControlPage />} />
 
                 {/* Contacts Routes */}
                 <Route path={ROUTE_PATHS.CONTACTS.substring(1)} element={<ContactsPage />} />

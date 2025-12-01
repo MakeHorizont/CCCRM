@@ -140,11 +140,22 @@ const updateProductionOrder = async (orderData: ProductionOrder): Promise<Produc
     updatedOrder.hasMaterialShortage = hasShortage;
 
     // STRICT BLOCKING IN MOBILIZATION MODE IF STARTING PRODUCTION
-    if (systemMode === 'mobilization' && hasShortage) {
-        const isStarting = ['В производстве', 'Готово к запуску'].includes(updatedOrder.status) && 
-                           !['В производстве', 'Готово к запуску'].includes(originalOrder.status);
-        if (isStarting) {
-             throw new Error("РЕЖИМ МОБИЛИЗАЦИИ: Запуск задания запрещен. Недостаточно сырья на складе.");
+    // Checking if we are transitioning INTO a running state
+    const isStarting = ['В производстве', 'Готово к запуску'].includes(updatedOrder.status) && 
+                       !['В производстве', 'Готово к запуску'].includes(originalOrder.status);
+
+    if (isStarting && hasShortage) {
+        if (systemMode === 'mobilization') {
+             throw new Error("⛔ РЕЖИМ МОБИЛИЗАЦИИ: Запуск задания физически заблокирован! Недостаточно сырья на складе. Пополните запасы.");
+        } else {
+            // Development mode warning (via system event, but allow proceed)
+            await systemService.logEvent(
+                'Запуск с дефицитом',
+                `ПЗ #${updatedOrder.id} запущено с дефицитом сырья (Режим Развития).`,
+                'production',
+                updatedOrder.id,
+                'ProductionOrder'
+            );
         }
     }
 

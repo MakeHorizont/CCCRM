@@ -4,7 +4,7 @@
 export const ROUTE_PATHS = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
-  ANALYTICS: '/analytics', // New path
+  ANALYTICS: '/analytics',
   PROFILE: '/profile',
   CONTACTS: '/contacts',
   WAREHOUSE: '/warehouse',
@@ -40,4 +40,5 @@ export const ROUTE_PATHS = {
   NOTIFICATIONS: '/notifications',
   AUDIT_LOG: '/audit-log', 
   COUNCIL: '/council',
+  QUALITY_CONTROL: '/quality',
 };

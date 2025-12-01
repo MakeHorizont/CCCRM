@@ -11,4 +11,5 @@ export * from './finance';
 export * from './collaboration';
 export * from './common';
 export * from './system';
-export * from './council'; // New export
+export * from './council';
+export * from './quality'; // New export

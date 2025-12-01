@@ -24,6 +24,7 @@ import { rotationService } from './api/rotationService';
 import { systemService } from './api/systemService';
 import { councilService } from './api/councilService';
 import { analyticsService } from './api/analyticsService';
+import { qualityService } from './api/qualityService';
 
 export const apiService = {
     ...contactApi,
@@ -51,4 +52,5 @@ export const apiService = {
     ...systemService,
     ...councilService,
     ...analyticsService,
+    ...qualityService,
 };

@@ -1,5 +1,4 @@
 
-
 // services/api/discussionService.ts
 import { DiscussionTopic, DiscussionPost, Vote, WarehouseItem, WarehouseItemIncident, RationalizationDetails, DiscussionType } from '../../types';
 import { mockDiscussions } from '../mockData/discussions';
@@ -8,11 +7,20 @@ import { authService } from '../authService';
 import { delay, deepCopy, createSystemNotification } from './utils';
 import { generateId } from '../../utils/idGenerators';
 import { ROUTE_PATHS } from '../../constants';
-import { mockTransactions } from '../mockData/transactions'; // Needed for bonus transaction
+import { mockTransactions } from '../mockData/transactions';
 import { systemService } from './systemService';
+import { API_CONFIG } from './config';
+import { apiClient } from '../apiClient';
 
 
 const getDiscussionTopics = async (filters: { viewMode: 'active' | 'archived', type?: DiscussionType | 'all' }): Promise<DiscussionTopic[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        return apiClient.get<DiscussionTopic[]>('/discussions/topics', {
+            archived: filters.viewMode === 'archived',
+            type: filters.type !== 'all' ? filters.type : undefined
+        });
+    }
+
     await delay(400);
     let topics = deepCopy(mockDiscussions);
     if (filters.viewMode === 'archived') {
@@ -29,12 +37,20 @@ const getDiscussionTopics = async (filters: { viewMode: 'active' | 'archived', t
 };
 
 const getDiscussionTopicById = async (id: string): Promise<DiscussionTopic | null> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        return apiClient.get<DiscussionTopic>(`/discussions/topics/${id}`);
+    }
+
     await delay(300);
     const topic = mockDiscussions.find(t => t.id === id);
     return topic ? deepCopy(topic) : null;
 };
 
 const addDiscussionTopic = async (data: Omit<DiscussionTopic, 'id'|'authorId'|'authorName'|'createdAt'|'updatedAt'|'isArchived'|'archivedAt'|'postCount'|'posts'>): Promise<DiscussionTopic> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        return apiClient.post<DiscussionTopic>('/discussions/topics', data);
+    }
+
     await delay(500);
     const user = await authService.getCurrentUser();
     if (!user) throw new Error("User not authenticated");
@@ -65,6 +81,10 @@ const addDiscussionTopic = async (data: Omit<DiscussionTopic, 'id'|'authorId'|'a
 };
 
 const updateDiscussionTopic = async (topicId: string, data: Partial<Pick<DiscussionTopic, 'title' | 'description' | 'tags'>>): Promise<DiscussionTopic> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        return apiClient.patch<DiscussionTopic>(`/discussions/topics/${topicId}`, data);
+    }
+
     await delay(400);
     const index = mockDiscussions.findIndex(t => t.id === topicId);
     if (index === -1) throw new Error("Topic not found");
@@ -73,6 +93,14 @@ const updateDiscussionTopic = async (topicId: string, data: Partial<Pick<Discuss
 };
 
 const archiveDiscussionTopic = async (topicId: string, archive: boolean): Promise<DiscussionTopic> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        await apiClient.post(`/discussions/topics/${topicId}/archive`, { archive });
+        // Backend returns status 200 OK usually, assume success or refetch.
+        // For consistency with mock return, we might want to fetch updated topic or return partial.
+        // Here, we just return what getById would return
+        return (await getDiscussionTopicById(topicId))!;
+    }
+
     await delay(300);
     const index = mockDiscussions.findIndex(t => t.id === topicId);
     if (index === -1) throw new Error("Topic not found");
@@ -84,6 +112,11 @@ const archiveDiscussionTopic = async (topicId: string, archive: boolean): Promis
 };
 
 const deleteDiscussionTopic = async (topicId: string): Promise<{ success: true }> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        await apiClient.delete(`/discussions/topics/${topicId}`);
+        return { success: true };
+    }
+
     await delay(500);
     const index = mockDiscussions.findIndex(t => t.id === topicId);
     if (index > -1 && mockDiscussions[index].isArchived) {
@@ -95,6 +128,12 @@ const deleteDiscussionTopic = async (topicId: string): Promise<{ success: true }
 };
 
 const addDiscussionPost = async (data: { topicId: string, content: string, parentId: string | null }): Promise<DiscussionTopic> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        await apiClient.post(`/discussions/topics/${data.topicId}/posts`, { content: data.content, parentId: data.parentId });
+        // Return updated topic to refresh UI
+        return (await getDiscussionTopicById(data.topicId))!;
+    }
+
     await delay(400);
     const user = await authService.getCurrentUser();
     if (!user) throw new Error("User not authenticated");
@@ -135,6 +174,11 @@ const addDiscussionPost = async (data: { topicId: string, content: string, paren
 };
 
 const togglePostReaction = async (postId: string, emoji: string, userId: string): Promise<{ success: true }> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        await apiClient.post(`/discussions/posts/${postId}/react`, { emoji });
+        return { success: true };
+    }
+
     await delay(100);
     const topic = mockDiscussions.find(t => t.posts.some(p => p.id === postId));
     if (!topic) throw new Error("Post not found");
@@ -155,6 +199,10 @@ const togglePostReaction = async (postId: string, emoji: string, userId: string)
 };
 
 const startVoteOnTopic = async (topicId: string, proposal: string): Promise<DiscussionTopic> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        return apiClient.post<DiscussionTopic>(`/discussions/topics/${topicId}/vote/start`, { proposal });
+    }
+
     await delay(400);
     const index = mockDiscussions.findIndex(t => t.id === topicId);
     if (index === -1) throw new Error("Topic not found");
@@ -165,6 +213,10 @@ const startVoteOnTopic = async (topicId: string, proposal: string): Promise<Disc
 };
 
 const castVote = async (topicId: string, userId: string, vote: 'for' | 'against', argument: string): Promise<DiscussionTopic> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        return apiClient.post<DiscussionTopic>(`/discussions/topics/${topicId}/vote/cast`, { decision: vote.toUpperCase(), argument });
+    }
+
     await delay(400);
     const user = await authService.getCurrentUser();
     if(!user) throw new Error("User not authenticated");
@@ -185,6 +237,10 @@ const castVote = async (topicId: string, userId: string, vote: 'for' | 'against'
 };
 
 const closeVoteOnTopic = async (topicId: string): Promise<DiscussionTopic> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        return apiClient.post<DiscussionTopic>(`/discussions/topics/${topicId}/vote/close`, {});
+    }
+
     await delay(400);
     const index = mockDiscussions.findIndex(t => t.id === topicId);
     if (index === -1) throw new Error("Topic not found");
@@ -194,7 +250,10 @@ const closeVoteOnTopic = async (topicId: string): Promise<DiscussionTopic> => {
 };
 
 const createDiscussionFromWarehouseIncident = async (incident: WarehouseItemIncident, item: WarehouseItem): Promise<DiscussionTopic> => {
-    await delay(500);
+    // For Hybrid: if discussions are on Real API, use it. Otherwise Mock.
+    // NOTE: This method might ideally call a specific endpoint like /discussions/from-incident,
+    // but for now we construct the payload manually to match addDiscussionTopic
+    
     const user = await authService.getCurrentUser();
     if (!user) throw new Error("User not authenticated");
     
@@ -212,39 +271,26 @@ ${incident.description}
 ### Предложение к обсуждению:
 Предлагается коллективно проанализировать причины данного инцидента и разработать меры для предотвращения подобных ситуаций в будущем.`;
     
-    const newTopic: DiscussionTopic = {
-      id: generateId('topic'),
+    return addDiscussionTopic({
       type: 'general',
       title,
       description,
-      authorId: user.id,
-      authorName: user.name,
       status: 'open',
       tags: ['склад', 'инцидент', incident.type],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      isArchived: false,
-      postCount: 0,
-      posts: [],
       relatedEntity: {
         type: 'warehouse_item',
         itemId: item.id,
         itemName: item.name,
         incidentId: incident.id
       }
-    };
-    
-    mockDiscussions.unshift(newTopic);
-    
-    const incidentIndex = mockWarehouseIncidents.findIndex(i => i.id === incident.id);
-    if(incidentIndex > -1){
-      mockWarehouseIncidents[incidentIndex].relatedDiscussionId = newTopic.id;
-    }
-    
-    return deepCopy(newTopic);
+    });
 };
 
 const implementRationalization = async (topicId: string, actualEconomy: number): Promise<DiscussionTopic> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.DISCUSSIONS) {
+        return apiClient.post<DiscussionTopic>(`/discussions/topics/${topicId}/rationalization/implement`, { actualEconomy });
+    }
+
     await delay(800);
     const index = mockDiscussions.findIndex(t => t.id === topicId);
     if (index === -1) throw new Error("Topic not found");

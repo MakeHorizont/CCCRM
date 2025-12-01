@@ -1,10 +1,20 @@
+
 // services/api/knowledgeBaseService.ts
 import { KnowledgeBaseItem, KnowledgeBaseFolder, KnowledgeBaseFile } from '../../types';
 import { mockKnowledgeBaseItems } from '../mockData/knowledgeBaseItems';
 import { delay, deepCopy } from './utils';
 import { generateId } from '../../utils/idGenerators';
+import { API_CONFIG } from './config';
+import { apiClient } from '../apiClient';
 
 const getKnowledgeBaseItems = async (parentId: string | null, userId: string, roles: string[], viewMode: 'active' | 'archived' = 'active'): Promise<KnowledgeBaseItem[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KNOWLEDGE_BASE) {
+        return apiClient.get<KnowledgeBaseItem[]>('/knowledge-base/items', {
+            parentId: parentId || 'root',
+            archived: viewMode === 'archived'
+        });
+    }
+
     await delay(300);
     return deepCopy(mockKnowledgeBaseItems).filter(item => 
         (item.itemType === 'folder' ? item.parentId === parentId : item.folderId === parentId) &&
@@ -13,13 +23,16 @@ const getKnowledgeBaseItems = async (parentId: string | null, userId: string, ro
 };
 
 const getKnowledgeBaseFileContent = async (fileId: string, userId: string, roles: string[]): Promise<KnowledgeBaseFile | null> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KNOWLEDGE_BASE) {
+        return apiClient.get<KnowledgeBaseFile>(`/knowledge-base/files/${fileId}/content`);
+    }
+
     await delay(200);
     const file = mockKnowledgeBaseItems.find(item => item.id === fileId && item.itemType === 'file');
     if (!file) {
         return null;
     }
-    // Basic permission check - in real app would be more complex
-    // For now, allow if no rules or user has a matching rule
+    // Basic permission check
     const hasAccess = !file.accessRules || file.accessRules.length === 0 || file.accessRules.some(rule => (rule.entityId === userId && rule.entityType === 'user') || (roles.includes(rule.entityId) && rule.entityType === 'role'));
 
     if (hasAccess) {
@@ -29,6 +42,10 @@ const getKnowledgeBaseFileContent = async (fileId: string, userId: string, roles
 };
 
 const createKnowledgeBaseFolder = async (folderData: Omit<KnowledgeBaseFolder, 'id' | 'createdAt' | 'updatedAt' | 'itemType' | 'isArchived' | 'archivedAt'>): Promise<KnowledgeBaseFolder> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KNOWLEDGE_BASE) {
+        return apiClient.post<KnowledgeBaseFolder>('/knowledge-base/folders', folderData);
+    }
+
     await delay(300);
     const newFolder: KnowledgeBaseFolder = {
         ...folderData,
@@ -43,6 +60,10 @@ const createKnowledgeBaseFolder = async (folderData: Omit<KnowledgeBaseFolder, '
 };
 
 const createKnowledgeBaseFile = async (fileData: Omit<KnowledgeBaseFile, 'id' | 'createdAt' | 'updatedAt' | 'itemType' | 'isArchived' | 'archivedAt'>): Promise<KnowledgeBaseFile> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KNOWLEDGE_BASE) {
+        return apiClient.post<KnowledgeBaseFile>('/knowledge-base/files', fileData);
+    }
+
     await delay(300);
     const newFile: KnowledgeBaseFile = {
         ...fileData,
@@ -57,6 +78,10 @@ const createKnowledgeBaseFile = async (fileData: Omit<KnowledgeBaseFile, 'id' | 
 };
 
 const updateKnowledgeBaseItem = async (itemId: string, updates: Partial<KnowledgeBaseItem>): Promise<KnowledgeBaseItem> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KNOWLEDGE_BASE) {
+        return apiClient.patch<KnowledgeBaseItem>(`/knowledge-base/items/${itemId}`, updates);
+    }
+
     await delay(300);
     const index = mockKnowledgeBaseItems.findIndex(i => i.id === itemId);
     if (index === -1) throw new Error("Knowledge Base Item not found");
@@ -85,6 +110,11 @@ const updateKnowledgeBaseItem = async (itemId: string, updates: Partial<Knowledg
 };
 
 const archiveKnowledgeBaseItem = async (itemId: string, archive: boolean): Promise<{ success: true }> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KNOWLEDGE_BASE) {
+        await apiClient.post(`/knowledge-base/items/${itemId}/archive`, { archive });
+        return { success: true };
+    }
+
     await delay(300);
     const index = mockKnowledgeBaseItems.findIndex(i => i.id === itemId);
     if (index === -1) throw new Error("Knowledge Base Item not found");
@@ -95,6 +125,11 @@ const archiveKnowledgeBaseItem = async (itemId: string, archive: boolean): Promi
 };
 
 const deleteKnowledgeBaseItem = async (itemId: string): Promise<{ success: true }> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KNOWLEDGE_BASE) {
+        await apiClient.delete(`/knowledge-base/items/${itemId}`);
+        return { success: true };
+    }
+
     await delay(500);
     const index = mockKnowledgeBaseItems.findIndex(i => i.id === itemId);
     if (index > -1 && mockKnowledgeBaseItems[index].isArchived) {

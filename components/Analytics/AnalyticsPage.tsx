@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { ChartPieIcon, CogIcon, BanknotesIcon } from '../UI/Icons';
+import { ChartPieIcon, CogIcon, BanknotesIcon, UserGroupIcon } from '../UI/Icons';
 import ProductionAnalyticsTab from './ProductionAnalyticsTab';
 import CostAnalyticsTab from './CostAnalyticsTab';
+import LaborAnalyticsTab from './LaborAnalyticsTab';
 
-type AnalyticsTab = 'production' | 'finance' | 'quality';
+type AnalyticsTab = 'production' | 'finance' | 'labor';
 
 const AnalyticsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('production');
@@ -25,21 +26,23 @@ const AnalyticsPage: React.FC = () => {
       </div>
 
       <div className="border-b border-brand-border">
-        <nav className="-mb-px flex space-x-2" aria-label="Tabs">
+        <nav className="-mb-px flex space-x-2 overflow-x-auto" aria-label="Tabs">
           <button onClick={() => setActiveTab('production')} className={tabButtonStyle('production')}>
             <CogIcon className="h-5 w-5 mr-2"/> Производство
           </button>
           <button onClick={() => setActiveTab('finance')} className={tabButtonStyle('finance')}>
-            <BanknotesIcon className="h-5 w-5 mr-2"/> Экономика (Себестоимость)
+            <BanknotesIcon className="h-5 w-5 mr-2"/> Экономика
           </button>
-          {/* Future: Quality Tab */}
+          <button onClick={() => setActiveTab('labor')} className={tabButtonStyle('labor')}>
+            <UserGroupIcon className="h-5 w-5 mr-2"/> Труд и Кадры
+          </button>
         </nav>
       </div>
 
       <div className="py-2">
         {activeTab === 'production' && <ProductionAnalyticsTab />}
         {activeTab === 'finance' && <CostAnalyticsTab />}
-        {activeTab === 'quality' && <div className="p-8 text-center text-brand-text-muted">Раздел в разработке...</div>}
+        {activeTab === 'labor' && <LaborAnalyticsTab />}
       </div>
     </div>
   );

@@ -4,7 +4,8 @@ export interface ApiConfig {
   BASE_URL: string;
   MODULES: {
     AUTH: boolean;
-    USERS: boolean;
+    USERS: boolean; // General user data
+    HR: boolean;    // Payroll, Attendance, KTU
     WAREHOUSE: boolean;
     ORDERS: boolean;
     PRODUCTION: boolean;
@@ -13,6 +14,9 @@ export interface ApiConfig {
     STRATEGY: boolean;
     KANBAN: boolean;
     KNOWLEDGE_BASE: boolean;
+    DISCUSSIONS: boolean;
+    COUNCIL: boolean; // Governance & Voting
+    QUALITY: boolean; // Quality Control (OTK)
   };
   MOCK_DELAY: number;
 }
@@ -23,6 +27,7 @@ export const API_CONFIG: ApiConfig = {
   MODULES: {
     AUTH: false,
     USERS: false,
+    HR: false,
     WAREHOUSE: false,
     ORDERS: false,
     PRODUCTION: false,
@@ -31,6 +36,9 @@ export const API_CONFIG: ApiConfig = {
     STRATEGY: false,
     KANBAN: false,
     KNOWLEDGE_BASE: false,
+    DISCUSSIONS: false,
+    COUNCIL: false,
+    QUALITY: false,
   },
   MOCK_DELAY: 300,
 };

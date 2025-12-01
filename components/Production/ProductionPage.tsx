@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { ProductionOrder, ProductionOrderStatus, User, WarehouseItem, Order as SalesOrder, ProductionOrderItem } from '../../types';
 import { apiService } from '../../services/apiService';
@@ -10,7 +7,7 @@ import Card from '../UI/Card';
 import Button from '../UI/Button';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import Input from '../UI/Input';
-import { CogIcon as ProductionIcon, PlusCircleIcon, MagnifyingGlassIcon, FunnelIcon, TableCellsIcon, ArchiveBoxIcon as ViewArchiveIcon, PencilSquareIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, TrashIcon, ExclamationTriangleIcon, PlayCircleIcon, ChevronDownIcon, ChevronUpIcon, LightBulbIcon, DevicePhoneMobileIcon } from '../UI/Icons';
+import { CogIcon as ProductionIcon, PlusCircleIcon, MagnifyingGlassIcon, FunnelIcon, TableCellsIcon, ArchiveBoxIcon as ViewArchiveIcon, PencilSquareIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, TrashIcon, ExclamationTriangleIcon, PlayCircleIcon, ChevronDownIcon, ChevronUpIcon, LightBulbIcon, DevicePhoneMobileIcon, FireIcon, ScaleIcon } from '../UI/Icons';
 import { PRODUCTION_ORDER_STATUS_COLOR_MAP, ROUTE_PATHS } from '../../constants';
 import ConfirmationModal from '../UI/ConfirmationModal';
 import Tooltip from '../UI/Tooltip';
@@ -18,6 +15,7 @@ import ProductionRunModal from './ProductionRunModal';
 import { useView } from '../../hooks/useView';
 import { useNavigate } from 'react-router-dom';
 import CreateTopicModal from '../Discussions/CreateTopicModal';
+import { useAppSettings } from '../../hooks/useAppSettings';
 
 type ViewMode = 'active' | 'archived';
 
@@ -83,6 +81,7 @@ const MobileProductionOrderCard: React.FC<{
 const ProductionPage: React.FC = () => {
   const { user } = useAuth();
   const { isMobileView } = useView(); 
+  const { systemMode } = useAppSettings();
   const navigate = useNavigate();
   const [productionOrders, setProductionOrders] = useState<ProductionOrder[]>([]);
   const [usersForAssigning, setUsersForAssigning] = useState<User[]>([]);
@@ -197,6 +196,17 @@ const ProductionPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Mode Indicator Banner */}
+      <div className={`p-3 rounded-lg flex items-center justify-between ${systemMode === 'mobilization' ? 'bg-red-100 text-red-900 border border-red-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
+           <div className="flex items-center">
+               {systemMode === 'mobilization' ? <FireIcon className="h-6 w-6 mr-2 animate-pulse text-red-600"/> : <ScaleIcon className="h-6 w-6 mr-2 text-emerald-600"/>}
+               <div>
+                   <h3 className="font-bold text-sm">ТЕКУЩИЙ РЕЖИМ: {systemMode === 'mobilization' ? 'МОБИЛИЗАЦИЯ' : 'РАЗВИТИЕ'}</h3>
+                   <p className="text-xs opacity-80">{systemMode === 'mobilization' ? 'Жесткий контроль ресурсов. Запуск без сырья заблокирован.' : 'Стандартный режим. Допускаются гибкие решения.'}</p>
+               </div>
+           </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
         <h1 className="text-3xl font-semibold text-brand-text-primary mb-4 sm:mb-0 flex items-center">
           <ProductionIcon className="h-8 w-8 mr-3 text-brand-primary" />

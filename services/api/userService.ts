@@ -8,15 +8,24 @@ import { mockWarehouseIncidents } from '../mockData/warehouseIncidents';
 import { authService } from '../authService';
 import { delay, deepCopy } from './utils';
 import { BONUS_PER_COEFFICIENT_POINT, calculateTaskCoefficient } from '../../constants';
-import { systemService } from './systemService'; // Import systemService
+import { systemService } from './systemService';
+import { API_CONFIG } from './config';
+import { apiClient } from '../apiClient';
 
-const getUsersWithHierarchyDetails = (): Promise<User[]> => {
+const getUsersWithHierarchyDetails = async (): Promise<User[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.HR) {
+        return apiClient.get<User[]>('/hr/users');
+    }
     return new Promise(resolve => {
         delay(300).then(() => resolve(deepCopy(authService.getMockUsers())));
     });
 };
 
-const getUsersForAssignee = (currentUserId: string): Promise<User[]> => {
+const getUsersForAssignee = async (currentUserId: string): Promise<User[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.HR) {
+         // Backend likely filters this based on active status
+        return apiClient.get<User[]>('/hr/users', { status: 'active' });
+    }
     return new Promise(resolve => {
         delay(100).then(() => {
             const users = authService.getMockUsers().filter(u => u.status !== 'fired');
@@ -25,7 +34,10 @@ const getUsersForAssignee = (currentUserId: string): Promise<User[]> => {
     });
 };
 
-const getAvailableFunctionalRoles = (): Promise<string[]> => {
+const getAvailableFunctionalRoles = async (): Promise<string[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.HR) {
+        return apiClient.get<string[]>('/hr/roles');
+    }
     return new Promise(resolve => {
         const roles = new Set<string>();
         authService.getMockUsers().forEach(user => {
@@ -36,6 +48,10 @@ const getAvailableFunctionalRoles = (): Promise<string[]> => {
 };
 
 const updateUserProfile = async (userId: string, profileData: Partial<User>): Promise<User> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.HR) {
+        return apiClient.patch<User>(`/hr/users/${userId}`, profileData);
+    }
+
     await delay(400);
     const userIndex = MOCK_USERS.findIndex(u => u.id === userId);
     if (userIndex === -1) {
@@ -85,6 +101,11 @@ const updateUserProfile = async (userId: string, profileData: Partial<User>): Pr
 };
 
 const startWorkShift = async (userId: string): Promise<void> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.HR) {
+        await apiClient.post('/hr/attendance/check-in', { userId });
+        return;
+    }
+
     await delay(300);
     const userIndex = MOCK_USERS.findIndex(u => u.id === userId);
     if (userIndex === -1) throw new Error("User not found");
@@ -95,10 +116,8 @@ const startWorkShift = async (userId: string): Promise<void> => {
     
     if (!user.attendance) user.attendance = [];
     
-    // Check if already started
     const existingEntryIndex = user.attendance.findIndex(e => e.date === today);
     
-    // If shift starts after 10:00 AM, mark as late (simple logic)
     const isLate = now.getHours() >= 10; 
     const type = isLate ? 'late' : 'work';
 
@@ -109,7 +128,6 @@ const startWorkShift = async (userId: string): Promise<void> => {
             checkInTime: now.toISOString() 
         });
     } else {
-        // Update existing entry if it was absent/excused to active work
         if (['excused_absence', 'unexcused_absence'].includes(user.attendance[existingEntryIndex].type)) {
              user.attendance[existingEntryIndex].type = type;
              user.attendance[existingEntryIndex].checkInTime = now.toISOString();
@@ -121,6 +139,11 @@ const startWorkShift = async (userId: string): Promise<void> => {
 };
 
 const endWorkShift = async (userId: string): Promise<void> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.HR) {
+        await apiClient.post('/hr/attendance/check-out', { userId });
+        return;
+    }
+
     await delay(300);
     const userIndex = MOCK_USERS.findIndex(u => u.id === userId);
     if (userIndex === -1) throw new Error("User not found");
@@ -128,14 +151,12 @@ const endWorkShift = async (userId: string): Promise<void> => {
     const user = MOCK_USERS[userIndex];
     const today = new Date().toISOString().split('T')[0];
     
-    if (!user.attendance) return; // No attendance record
+    if (!user.attendance) return; 
     
     const existingEntryIndex = user.attendance.findIndex(e => e.date === today);
     
     if (existingEntryIndex !== -1) {
         user.attendance[existingEntryIndex].checkOutTime = new Date().toISOString();
-        // Calculate hours worked for logging (mock calculation)
-        // In real app: diff between checkIn and checkOut
     }
     
     authService.updateMockUser(user);
@@ -143,6 +164,10 @@ const endWorkShift = async (userId: string): Promise<void> => {
 };
 
 const getUserPayslip = async (userId: string, year: number, month: number): Promise<PayslipData> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.HR) {
+        return apiClient.get<PayslipData>(`/hr/payroll/${userId}/payslip`, { year, month });
+    }
+
     await delay(500);
     const user = MOCK_USERS.find(u => u.id === userId);
     if (!user || user.dailyRate === undefined) {
@@ -189,10 +214,9 @@ const getUserPayslip = async (userId: string, year: number, month: number): Prom
     );
     
     // KTU Calculation for Bonus
-    const ktuData = await calculateUserKTU(userId); // Get fresh KTU
+    const ktuData = await calculateUserKTU(userId); 
     const ktuMultiplier = ktuData.total;
     
-    // Task Bonus is multiplied by KTU in our "Justice Economy"
     const rawTaskBonus = completedTasksInMonth.reduce((sum, task) => sum + ((task.coefficient || calculateTaskCoefficient(task)) * BONUS_PER_COEFFICIENT_POINT), 0);
     const finalTaskBonus = Math.round(rawTaskBonus * ktuMultiplier);
 
@@ -210,6 +234,10 @@ const getUserPayslip = async (userId: string, year: number, month: number): Prom
 };
 
 const calculateUserKTU = async (userId: string): Promise<KTUDetails> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.HR) {
+        return apiClient.get<KTUDetails>(`/hr/payroll/${userId}/ktu`);
+    }
+
     await delay(500);
     const user = MOCK_USERS.find(u => u.id === userId);
     if (!user) throw new Error("User not found");
@@ -235,7 +263,7 @@ const calculateUserKTU = async (userId: string): Promise<KTUDetails> => {
         new Date(po.actualEndDate) >= firstDayOfMonth &&
         new Date(po.actualEndDate) <= lastDayOfMonth
     );
-    const productionScore = productionOrders.length * 0.05; // 0.05 per closed PO
+    const productionScore = productionOrders.length * 0.05;
     if (productionScore > 0) {
         total += productionScore;
         components.push({ label: `Выполнение ПЗ (${productionOrders.length})`, value: productionScore, type: 'bonus', description: 'За успешное закрытие производственных заданий' });
@@ -255,13 +283,12 @@ const calculateUserKTU = async (userId: string): Promise<KTUDetails> => {
         taskScore += diff;
     });
     if (taskScore > 0) {
-        // Cap task score to reasonable amount per month
         taskScore = Math.min(taskScore, 0.5);
         total += taskScore;
         components.push({ label: `Задачи Kanban (${tasks.length})`, value: parseFloat(taskScore.toFixed(2)), type: 'bonus', description: 'Бонус за сложность выполненных задач' });
     }
 
-    // 3. Discipline (Attendance)
+    // 3. Discipline
     const attendance = user.attendance || [];
     const currentMonthAttendance = attendance.filter(a => new Date(a.date).getMonth() === month && new Date(a.date).getFullYear() === year);
     
@@ -284,7 +311,7 @@ const calculateUserKTU = async (userId: string): Promise<KTUDetails> => {
         components.push({ label: `Прогулы (${unexcusedCount})`, value: -penalty, type: 'penalty', description: 'Серьезное нарушение графика' });
     }
 
-    // 4. Quality (Incidents)
+    // 4. Quality
     const incidents = mockWarehouseIncidents.filter(i => 
         i.userId === userId && 
         (i.type === 'damage' || i.type === 'defect') &&
@@ -298,7 +325,6 @@ const calculateUserKTU = async (userId: string): Promise<KTUDetails> => {
         components.push({ label: `Инциденты качества (${incidents.length})`, value: -penalty, type: 'penalty', description: 'Брак или порча имущества' });
     }
 
-    // Ensure non-negative (though 0.5 is usually minimum)
     total = Math.max(0.5, parseFloat(total.toFixed(2)));
 
     const result: KTUDetails = {
@@ -309,26 +335,31 @@ const calculateUserKTU = async (userId: string): Promise<KTUDetails> => {
         calculatedAt: new Date().toISOString()
     };
 
-    // Save to mock user
-    const userIndex = MOCK_USERS.findIndex(u => u.id === userId);
-    if (userIndex > -1) {
-        MOCK_USERS[userIndex].currentMonthKTU = result;
-        // Add to history if not present or update
-        const history = MOCK_USERS[userIndex].ktuHistory || [];
-        const existingHistoryIndex = history.findIndex(h => h.period === period);
-        if (existingHistoryIndex > -1) {
-            history[existingHistoryIndex] = result;
-        } else {
-            history.push(result);
+    // Save to mock user if mocking
+    if (!API_CONFIG.USE_REAL_API) {
+        const userIndex = MOCK_USERS.findIndex(u => u.id === userId);
+        if (userIndex > -1) {
+            MOCK_USERS[userIndex].currentMonthKTU = result;
+            const history = MOCK_USERS[userIndex].ktuHistory || [];
+            const existingHistoryIndex = history.findIndex(h => h.period === period);
+            if (existingHistoryIndex > -1) {
+                history[existingHistoryIndex] = result;
+            } else {
+                history.push(result);
+            }
+            MOCK_USERS[userIndex].ktuHistory = history;
+            authService.updateMockUser(MOCK_USERS[userIndex]);
         }
-        MOCK_USERS[userIndex].ktuHistory = history;
-        authService.updateMockUser(MOCK_USERS[userIndex]);
     }
 
     return result;
 };
 
 const getDailyStats = async (userId: string): Promise<DailyStats> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.HR) {
+        return apiClient.get<DailyStats>(`/hr/payroll/${userId}/daily-stats`);
+    }
+
     await delay(200);
     const user = MOCK_USERS.find(u => u.id === userId);
     if (!user) throw new Error("User not found");
@@ -354,7 +385,7 @@ const getDailyStats = async (userId: string): Promise<DailyStats> => {
     }
 
     const hourlyRate = (user.dailyRate || 0) / 8;
-    const earnedBase = Math.min(hoursWorked, 12) * hourlyRate; // Cap at 12 hours for safety calc
+    const earnedBase = Math.min(hoursWorked, 12) * hourlyRate; 
 
     // Bonus calculation for today
     const todayTasks = mockKanbanTasks.filter(t => 
@@ -364,7 +395,6 @@ const getDailyStats = async (userId: string): Promise<DailyStats> => {
         t.movedToDoneAt.startsWith(todayStr)
     );
     
-    // Preliminary KTU calc for TODAY (simplified)
     let currentKTU = 1.0;
     if (todayAttendance?.type === 'late') currentKTU -= 0.1;
     
@@ -393,5 +423,5 @@ export const userService = {
     endWorkShift,
     getUserPayslip,
     calculateUserKTU,
-    getDailyStats, // Exported new method
+    getDailyStats,
 };

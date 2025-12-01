@@ -8,8 +8,16 @@ import { generateId } from '../../utils/idGenerators';
 import { authService } from '../authService';
 import { systemService } from './systemService';
 import { ROUTE_PATHS } from '../../constants';
+import { API_CONFIG } from './config';
+import { apiClient } from '../apiClient';
 
 const getProposals = async (status?: 'active' | 'history'): Promise<CouncilProposal[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.COUNCIL) {
+        return apiClient.get<CouncilProposal[]>('/council/proposals', { 
+            status: status === 'active' ? 'PENDING' : undefined // Backend might filter differently
+        });
+    }
+
     await delay(300);
     let props = deepCopy(mockCouncilProposals);
     if (status === 'active') {
@@ -26,6 +34,12 @@ const createProposal = async (
     description: string,
     payload: any
 ): Promise<CouncilProposal> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.COUNCIL) {
+        return apiClient.post<CouncilProposal>('/council/proposals', {
+            type, title, description, payload
+        });
+    }
+
     await delay(400);
     const user = await authService.getCurrentUser();
     if (!user) throw new Error("User not authenticated");
@@ -41,7 +55,7 @@ const createProposal = async (
         status: 'pending',
         payload,
         votes: [],
-        requiredApprovals: 2, // Hardcoded threshold for now (simulating 2 out of 3)
+        requiredApprovals: 2, // Hardcoded threshold for mock (simulating 2 out of 3)
     };
 
     // Auto-vote for initiator
@@ -64,10 +78,9 @@ const createProposal = async (
     );
     
     // Notify Council Members
-    // In our mock system, Council = CEO + Managers
     const councilMembers = MOCK_USERS.filter(u => u.role === 'ceo' || u.role === 'manager');
     councilMembers.forEach(member => {
-        if (member.id !== user.id) { // Don't notify initiator
+        if (member.id !== user.id) { 
             createSystemNotification(
                 member.id,
                 'warning',
@@ -78,7 +91,7 @@ const createProposal = async (
         }
     });
 
-    // Check if initiator's vote is enough (e.g. threshold is 1 for dev mode, but usually it's >1)
+    // Check if initiator's vote is enough (e.g. threshold is 1 for dev mode)
     if (newProposal.votes.length >= newProposal.requiredApprovals) {
          await checkAndExecuteProposal(newProposal.id);
     }
@@ -87,6 +100,13 @@ const createProposal = async (
 };
 
 const voteForProposal = async (proposalId: string, decision: 'approve' | 'reject', comment?: string): Promise<CouncilProposal> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.COUNCIL) {
+        return apiClient.post<CouncilProposal>(`/council/proposals/${proposalId}/vote`, {
+            decision: decision.toUpperCase(),
+            comment
+        });
+    }
+
     await delay(400);
     const index = mockCouncilProposals.findIndex(p => p.id === proposalId);
     if (index === -1) throw new Error("Proposal not found");
@@ -116,7 +136,8 @@ const voteForProposal = async (proposalId: string, decision: 'approve' | 'reject
     return deepCopy(mockCouncilProposals[index]);
 };
 
-// Internal helper to check thresholds and execute logic
+// Internal helper to check thresholds and execute logic (MOCK ONLY LOGIC)
+// In Real API mode, this logic lives on the server.
 const checkAndExecuteProposal = async (proposalId: string) => {
     const index = mockCouncilProposals.findIndex(p => p.id === proposalId);
     if (index === -1) return;
@@ -129,8 +150,7 @@ const checkAndExecuteProposal = async (proposalId: string) => {
         proposal.status = 'approved';
         proposal.executedAt = new Date().toISOString();
         
-        // --- THE SMART CONTRACT LOGIC ---
-        // This code executes the decision. It's the only way to change these settings.
+        // --- THE SMART CONTRACT LOGIC (MOCK) ---
         switch (proposal.type) {
             case 'change_fund_settings':
                 if (proposal.payload.contributionPercentage !== undefined) {
@@ -149,7 +169,6 @@ const checkAndExecuteProposal = async (proposalId: string) => {
                 if (proposal.payload.mode) {
                     try {
                         localStorage.setItem('systemMode', proposal.payload.mode);
-                        // Trigger a storage event so other tabs/components update if listening (optional)
                         window.dispatchEvent(new Event("storage"));
                         await systemService.logEvent(
                             'Смена режима системы',
@@ -163,9 +182,7 @@ const checkAndExecuteProposal = async (proposalId: string) => {
                     }
                 }
                 break;
-            // Add other cases here (e.g. withdraw_fund)
         }
-        // --------------------------------
         
         await systemService.logEvent(
             'Решение Совета принято',
@@ -175,7 +192,7 @@ const checkAndExecuteProposal = async (proposalId: string) => {
             'CouncilProposal'
         );
 
-    } else if (rejects >= proposal.requiredApprovals) { // Or logic for rejection threshold
+    } else if (rejects >= proposal.requiredApprovals) { 
         proposal.status = 'rejected';
         await systemService.logEvent(
             'Решение Совета отклонено',
