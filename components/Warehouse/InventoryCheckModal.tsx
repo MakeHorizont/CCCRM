@@ -64,7 +64,8 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
             setCurrentCheck(newCheck);
             setStep('count');
         } catch (e) {
-            alert(e instanceof Error ? e.message : String(e));
+            const message = (e as any).message || String(e);
+            alert(message);
         } finally {
             setIsProcessing(false);
         }
@@ -112,7 +113,8 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
             setCurrentCheck(active);
             setStep('review');
          } catch (e) {
-             alert("Ошибка сохранения: " + (e instanceof Error ? e.message : String(e)));
+             const message = (e as any).message || String(e);
+             alert("Ошибка сохранения: " + message);
          } finally {
              setIsProcessing(false);
          }
@@ -126,7 +128,8 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
             onComplete();
             onClose();
         } catch (e) {
-            alert(e instanceof Error ? e.message : String(e));
+            const message = (e as any).message || String(e);
+            alert(message);
         } finally {
             setIsProcessing(false);
         }
@@ -140,7 +143,8 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
              await apiService.cancelInventoryCheck(currentCheck.id);
              onClose();
          } catch (e) {
-             alert(e instanceof Error ? e.message : String(e));
+             const message = (e as any).message || String(e);
+             alert(message);
          } finally {
              setIsProcessing(false);
          }

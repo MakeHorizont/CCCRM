@@ -569,6 +569,15 @@ const getLastShiftHandover = async (): Promise<ShiftHandover | null> => {
     return deepCopy(mockShiftHandovers[0]);
 };
 
+const getShiftHandovers = async (): Promise<ShiftHandover[]> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        return await apiClient.get<ShiftHandover[]>('/production/handovers');
+    }
+
+    await delay(300);
+    return deepCopy(mockShiftHandovers);
+};
+
 export const productionService = {
     getProductionOrders,
     addProductionOrder,
@@ -585,4 +594,5 @@ export const productionService = {
     checkProductionOrderMaterialShortage,
     createShiftHandover,
     getLastShiftHandover,
+    getShiftHandovers,
 };

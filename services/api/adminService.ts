@@ -20,6 +20,8 @@ import { mockCollectiveFund } from '../mockData/collectiveFund';
 import { mockDocuments } from '../mockData/documents';
 import { mockWarehouseIncidents } from '../mockData/warehouseIncidents';
 import { mockSystemEvents } from '../mockData/systemEvents';
+import { mockInventoryChecks } from '../mockData/inventoryChecks'; // Added
+import { mockQualityChecks } from '../mockData/qualityChecks'; // Added
 import { MOCK_USERS } from '../mockData/users';
 import { mockBonuses, delay } from './utils';
 import { API_CONFIG } from './config';
@@ -52,6 +54,8 @@ interface SystemState {
         warehouseIncidents: any[];
         systemEvents: any[];
         bonuses: any[];
+        inventoryChecks: any[]; // Added
+        qualityChecks: any[]; // Added
     }
 }
 
@@ -85,6 +89,8 @@ const exportSystemState = async (): Promise<Blob> => {
             warehouseIncidents: mockWarehouseIncidents,
             systemEvents: mockSystemEvents,
             bonuses: mockBonuses,
+            inventoryChecks: mockInventoryChecks, // Added
+            qualityChecks: mockQualityChecks, // Added
         }
     };
 
@@ -136,6 +142,8 @@ const importSystemState = async (file: File): Promise<{ success: true; message: 
                 replaceArray(mockWarehouseIncidents, state.data.warehouseIncidents);
                 replaceArray(mockSystemEvents, state.data.systemEvents);
                 replaceArray(mockBonuses, state.data.bonuses);
+                replaceArray(mockInventoryChecks, state.data.inventoryChecks); // Added
+                replaceArray(mockQualityChecks, state.data.qualityChecks); // Added
 
                 // Collective Fund is an object, update properties
                 if (state.data.collectiveFund) {
@@ -157,26 +165,13 @@ const importSystemState = async (file: File): Promise<{ success: true; message: 
 
 const hardReset = async (): Promise<void> => {
     await delay(2000);
-    // In a real app, this would call a backend endpoint to truncate tables.
-    // Here we just reload the page to reset to initial mock state (since mock files are static imports)
-    // But since imports are cached, we'd actually need to clear arrays. 
-    // For "Factory Reset" in a mock app, simple reload works IF the user hasn't persisted changes to localStorage (which we don't do for main data yet).
-    // However, since we modify in-memory arrays, we should clear them.
-    // BUT, the initial data is hardcoded in the files. We can't easily "reset to initial" without reloading the app 
-    // OR having a copy of initial state.
-    
-    // For this MVP, we will throw an error saying "Just refresh the page to reset mocks".
-    // Or we can clear everything to empty arrays.
-    
-    // Let's implement clear to empty.
     const emptyArray = (arr: any[]) => { arr.length = 0; };
     
     emptyArray(mockOrders);
     emptyArray(mockWarehouseItems);
     emptyArray(mockProductionOrders);
+    emptyArray(mockKanbanTasks);
     // ... keep users for login ability
-    // This is dangerous without re-seeding.
-    // Better to just advise refresh.
     
     window.location.reload();
 };
