@@ -1,9 +1,26 @@
 import { User, DevelopmentPlanItem, TrainingApplication, PerformanceReview, SalaryHistoryEntry } from '../../types';
 
 // CEO_EMAILS can be defined here or imported if used elsewhere for role assignment logic.
-export const CEO_EMAILS = ['romalev@fungfung.ru'];
+export const CEO_EMAILS = ['romalev@fungfung.ru', 'demo@fungfung.ru'];
 
 export let MOCK_USERS: User[] = [
+  {
+    id: 'user-demo', email: 'demo@fungfung.ru', name: 'Демо Пользователь',
+    role: 'ceo', permissions: ['manage_user_hierarchy'], managerId: null,
+    status: 'active', functionalRoles: ['Аудитор', 'Наблюдатель'], employmentStartDate: '2024-01-01',
+    dailyRate: 5000, salaryVisibility: 'visible',
+    tripBonusPerDay: 0, remoteWorkRate: 0,
+    attendance: [],
+    groupMembershipHistory: [],
+    achievements: [],
+    displayedAchievementId: null,
+    disciplinaryActions: [],
+    absences: {excused: 0, unexcused: 0},
+    developmentPlan: [],
+    trainingApplications: [],
+    performanceReviews: [],
+    salaryHistory: []
+  },
   {
     id: 'user1', email: 'romalev@fungfung.ru', name: 'Левченко Роман',
     role: 'ceo', permissions: ['manage_user_hierarchy'], managerId: null,

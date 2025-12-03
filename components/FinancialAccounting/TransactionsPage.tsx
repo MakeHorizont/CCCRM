@@ -6,12 +6,13 @@ import Card from '../UI/Card';
 import Button from '../UI/Button';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import Input from '../UI/Input';
-import { ArrowsUpDownIcon, PlusCircleIcon, MagnifyingGlassIcon, FunnelIcon, TableCellsIcon, ArchiveBoxIcon as ViewArchiveIcon, PencilSquareIcon, ArchiveBoxArrowDownIcon, ArrowUturnLeftIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, ArrowLeftIcon, SaveIcon } from '../UI/Icons';
+import { ArrowsUpDownIcon, PlusCircleIcon, MagnifyingGlassIcon, FunnelIcon, TableCellsIcon, ArchiveBoxIcon as ViewArchiveIcon, PencilSquareIcon, ArchiveBoxArrowDownIcon, ArrowUturnLeftIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, ArrowLeftIcon, SaveIcon, ArrowDownTrayIcon } from '../UI/Icons';
 import { TRANSACTION_CATEGORIES, TRANSACTION_TYPE_COLOR_MAP, ROUTE_PATHS } from '../../constants';
 import { useView } from '../../hooks/useView';
 import ConfirmationModal from '../UI/ConfirmationModal';
 import Tooltip from '../UI/Tooltip';
 import { useNavigate, useParams } from 'react-router-dom';
+import { downloadCSV } from '../../utils/exportUtils';
 
 type ViewMode = 'active' | 'archived';
 type SortDirection = 'asc' | 'desc';
@@ -89,6 +90,21 @@ const TransactionsPage: React.FC = () => {
         fetchTransactions();
     }, [fetchTransactions]);
     
+    const handleExportCSV = () => {
+         const dataToExport = transactions.map(tx => ({
+            ID: tx.id,
+            Дата: new Date(tx.date).toLocaleDateString('ru-RU'),
+            Тип: tx.type === 'income' ? 'Доход' : 'Расход',
+            Сумма: tx.amount,
+            Категория: tx.category,
+            Описание: tx.description,
+            Учет_ЕСХН: tx.isTaxDeductible !== false ? 'Да' : 'Нет',
+            Архив: tx.isArchived ? 'Да' : 'Нет'
+         }));
+         
+         downloadCSV(dataToExport, `transactions_export_${new Date().toISOString().split('T')[0]}.csv`, 'Экспорт транзакций');
+    };
+
     const handleArchiveToggle = async (transaction: Transaction) => {
         setIsInteractionLoading(true);
         try {
@@ -163,11 +179,14 @@ const TransactionsPage: React.FC = () => {
                     <ArrowsUpDownIcon className="h-8 w-8 mr-3 text-brand-primary" />
                     Финансовые Транзакции
                 </h1>
-                <div className="flex space-x-3 w-full sm:w-auto">
-                    <Button onClick={() => setViewMode(viewMode === 'active' ? 'archived' : 'active')} variant="secondary" leftIcon={<ViewArchiveIcon className="h-5 w-5"/>}>
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                    <Button onClick={handleExportCSV} variant="secondary" leftIcon={<ArrowDownTrayIcon className="h-5 w-5"/>} fullWidth={isMobileView}>
+                        Экспорт CSV
+                    </Button>
+                    <Button onClick={() => setViewMode(viewMode === 'active' ? 'archived' : 'active')} variant="secondary" leftIcon={<ViewArchiveIcon className="h-5 w-5"/>} fullWidth={isMobileView}>
                         {viewMode === 'active' ? 'Архив' : 'Активные'}
                     </Button>
-                    <Button onClick={() => navigate(`${ROUTE_PATHS.TRANSACTIONS}/new`)} variant="primary">
+                    <Button onClick={() => navigate(`${ROUTE_PATHS.TRANSACTIONS}/new`)} variant="primary" fullWidth={isMobileView}>
                         <PlusCircleIcon className="h-5 w-5 mr-2" />
                         Добавить транзакцию
                     </Button>

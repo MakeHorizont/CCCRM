@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import Import1CModal from './Import1CModal';
+import InventoryCheckModal from './InventoryCheckModal';
 import { WarehouseItem } from '../../types';
 import { apiService } from '../../services/apiService';
 import LoadingSpinner from '../UI/LoadingSpinner';
@@ -10,13 +11,14 @@ import ConfirmationModal from '../UI/ConfirmationModal';
 import {
     PlusCircleIcon, TableCellsIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, TrashIcon,
     ChevronUpIcon, ChevronDownIcon, ArchiveBoxIcon as ViewArchiveIcon,
-    ArrowsUpDownIcon, CogIcon, PencilSquareIcon
+    ArrowsUpDownIcon, CogIcon, PencilSquareIcon, ArrowDownTrayIcon, ClipboardDocumentCheckIcon
 } from '../UI/Icons';
 import Input from '../UI/Input';
 import { useView } from '../../hooks/useView';
 import MobileWarehouseItemCard from './MobileWarehouseItemCard';
 import Tooltip from '../UI/Tooltip';
 import { ROUTE_PATHS } from '../../constants';
+import { downloadCSV } from '../../utils/exportUtils';
 
 type SortableWarehouseKeys = keyof WarehouseItem | 'history'; 
 type SortDirection = 'asc' | 'desc';
@@ -27,6 +29,8 @@ const WarehousePage: React.FC = () => {
   const { isMobileView } = useView(); 
   const navigate = useNavigate();
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+
   const [items, setItems] = useState<WarehouseItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +56,22 @@ const WarehousePage: React.FC = () => {
   useEffect(() => {
     fetchPageData();
   }, [fetchPageData]);
+  
+  const handleExportCSV = () => {
+      const dataToExport = items.map(item => ({
+          ID: item.id,
+          Название: item.name,
+          SKU: item.sku,
+          Количество: item.quantity,
+          Цена: item.price,
+          Расположение: item.locationName || item.location,
+          Описание: item.description || '',
+          Обновлено: new Date(item.lastUpdated).toLocaleString('ru-RU'),
+          Архив: item.isArchived ? 'Да' : 'Нет'
+      }));
+      
+      downloadCSV(dataToExport, `warehouse_export_${new Date().toISOString().split('T')[0]}.csv`, 'Экспорт реестра склада');
+  };
 
   const columns: { label: string; key: SortableWarehouseKeys, minWidth?: string, className?: string, responsive?: boolean }[] = [
     { label: 'Название', key: 'name', minWidth: '150px', responsive: true },
@@ -100,6 +120,10 @@ const WarehousePage: React.FC = () => {
           {viewMode === 'active' ? 'Склад' : 'Архив склада'}
         </h1>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+          <Button onClick={handleExportCSV} variant="secondary" leftIcon={<ArrowDownTrayIcon className="h-5 w-5" />} fullWidth={isMobileView}>Экспорт CSV</Button>
+          {viewMode === 'active' && (
+              <Button onClick={() => setIsInventoryModalOpen(true)} variant="secondary" leftIcon={<ClipboardDocumentCheckIcon className="h-5 w-5" />} fullWidth={isMobileView}>Инвентаризация</Button>
+          )}
           <Button onClick={() => setIsImportModalOpen(true)} variant="secondary" leftIcon={<TableCellsIcon className="h-5 w-5" />} fullWidth={isMobileView}>Импорт 1С</Button>
           <Button onClick={() => setViewMode(viewMode === 'active' ? 'archived' : 'active')} variant="secondary" leftIcon={<ViewArchiveIcon className="h-5 w-5" />} fullWidth={isMobileView}>{viewMode === 'active' ? 'Перейти в архив' : 'Активные товары'}</Button>
           {viewMode === 'active' && <Button onClick={() => navigate(`${ROUTE_PATHS.WAREHOUSE}/new`)} variant="primary" fullWidth={isMobileView}><PlusCircleIcon className="h-5 w-5 mr-2" />Добавить товар</Button>}
@@ -174,7 +198,9 @@ const WarehousePage: React.FC = () => {
           )
         )}
       </Card>
+      
       <Import1CModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImportSuccess={fetchPageData} />
+      <InventoryCheckModal isOpen={isInventoryModalOpen} onClose={() => setIsInventoryModalOpen(false)} onComplete={fetchPageData} />
       
       <style>{`
         .custom-scrollbar-thin::-webkit-scrollbar { width: 6px; }

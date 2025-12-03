@@ -37,14 +37,19 @@ export const authService = {
       setTimeout(() => {
         const loginIdentifier = credentials.email.toLowerCase();
         let user: User | undefined;
+        
+        // Special check for demo mode
+        const isDemoMode = (loginIdentifier === 'demo' || loginIdentifier === 'demo@fungfung.ru') && credentials.password === 'demo';
 
-        if (loginIdentifier.includes('@')) {
+        if (isDemoMode) {
+             user = MOCK_USERS.find(u => u.email === 'demo@fungfung.ru');
+        } else if (loginIdentifier.includes('@')) {
           user = MOCK_USERS.find(u => u.email.toLowerCase() === loginIdentifier);
         } else {
           user = MOCK_USERS.find(u => u.email.toLowerCase().startsWith(loginIdentifier + '@'));
         }
 
-        if (user && credentials.password === 'password123') {
+        if ((user && credentials.password === 'password123') || (user && isDemoMode)) {
           const fullUser = {
             ...user,
             role: user.role || (CEO_EMAILS.includes(user.email) ? 'ceo' : 'employee'),

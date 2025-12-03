@@ -1,4 +1,5 @@
 
+
 import { KnowledgeBaseItem } from '../../types';
 
 export let mockKnowledgeBaseItems: KnowledgeBaseItem[] = [
@@ -25,6 +26,10 @@ export let mockKnowledgeBaseItems: KnowledgeBaseItem[] = [
     itemType: 'file',
     isArchived: false,
     tags: ['капитал', 'экономика', 'критика'],
+    mustRead: true,
+    readBy: [
+        { userId: 'user1', userName: 'Левченко Роман', timestamp: new Date(Date.now() - 10000000).toISOString() }
+    ]
   },
   {
     id: 'kb-folder-2',
@@ -62,6 +67,26 @@ export let mockKnowledgeBaseItems: KnowledgeBaseItem[] = [
     itemType: 'file',
     isArchived: false,
     tags: ['устав', 'партия', 'документ'],
+    mustRead: true,
+    quiz: {
+        title: 'Проверка знания Устава',
+        passingScorePercent: 100,
+        questions: [
+            {
+                id: 'q1',
+                text: 'Что является высшим принципом руководства?',
+                options: ['Анархия', 'Демократический централизм', 'Единоначалие', 'Рыночная конъюнктура'],
+                correctOptionIndex: 1
+            },
+            {
+                id: 'q2',
+                text: 'Кому принадлежат средства производства?',
+                options: ['Директору', 'Акционерам', 'Всему коллективу', 'Государству'],
+                correctOptionIndex: 2
+            }
+        ]
+    },
+    readBy: []
   },
   {
     id: 'kb-folder-archived-1',

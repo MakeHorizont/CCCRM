@@ -91,3 +91,26 @@ export interface StorageLocation {
   updatedAt: string;
   equipmentId?: string;
 }
+
+export type InventoryCheckStatus = 'in_progress' | 'completed' | 'cancelled';
+
+export interface InventoryCheckItem {
+  warehouseItemId: string;
+  warehouseItemName: string;
+  expectedQuantity: number;
+  actualQuantity?: number;
+  difference?: number;
+}
+
+export interface InventoryCheck {
+  id: string;
+  date: string;
+  status: InventoryCheckStatus;
+  items: InventoryCheckItem[];
+  conductedByUserId: string;
+  conductedByUserName: string;
+  notes?: string;
+  createdAt: string;
+  completedAt?: string;
+  blindMode?: boolean;
+}

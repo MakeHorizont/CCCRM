@@ -24,12 +24,14 @@ import { useAuth } from '../../hooks/useAuth';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import LoadingSpinner from '../UI/LoadingSpinner';
-import { BrainCircuitIcon, FolderIcon, DocumentIcon, PlusCircleIcon, ArrowUpIcon, PencilIcon as EditIcon, ArchiveBoxArrowDownIcon, ArrowPathIcon as RestoreIcon, TrashIcon, ViewArchiveIcon, ChevronRightIcon, SaveIcon, DocumentArrowUpIcon } from '../UI/Icons';
+import { BrainCircuitIcon, FolderIcon, DocumentIcon, PlusCircleIcon, ArrowUpIcon, PencilIcon as EditIcon, ArchiveBoxArrowDownIcon, ArrowPathIcon as RestoreIcon, TrashIcon, ViewArchiveIcon, ChevronRightIcon, SaveIcon, DocumentArrowUpIcon, CheckCircleIcon, ExclamationCircleIcon, AcademicCapIcon } from '../UI/Icons';
 import CreateItemModal from './CreateItemModal';
-import EditItemDetailsModal from './EditItemDetailsModal'; // Updated import
+import EditItemDetailsModal from './EditItemDetailsModal'; 
+import QuizModal from './QuizModal'; // Import QuizModal
 import ConfirmationModal from '../UI/ConfirmationModal';
 import KnowledgeBaseItemRow from './KnowledgeBaseItemRow';
 import MarkdownEditor from './MarkdownEditor'; 
+import Tooltip from '../UI/Tooltip';
 
 // Ensure marked and DOMPurify are available globally via CDN
 declare global {
@@ -57,8 +59,8 @@ const KnowledgeBasePage: React.FC = () => {
 
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingInteraction, setIsLoadingInteraction] = useState(false); // For general interactions like save, delete, archive
-  const [isUploading, setIsUploading] = useState(false); // Specifically for file uploads
+  const [isLoadingInteraction, setIsLoadingInteraction] = useState(false); 
+  const [isUploading, setIsUploading] = useState(false); 
   const [error, setError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState<string | null>(null);
@@ -71,12 +73,14 @@ const KnowledgeBasePage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalType, setCreateModalType] = useState<'folder' | 'file' | null>(null);
   
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Renamed state
-  const [itemToEdit, setItemToEdit] = useState<KnowledgeBaseItem | null>(null); // Renamed state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); 
+  const [itemToEdit, setItemToEdit] = useState<KnowledgeBaseItem | null>(null); 
 
   const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<KnowledgeBaseItem | null>(null);
   
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+
   const [activeDragId, setActiveDragId] = useState<UniqueIdentifier | null>(null);
   const [isDraggingOverZone, setIsDraggingOverZone] = useState<boolean>(false);
 
@@ -131,6 +135,9 @@ const KnowledgeBasePage: React.FC = () => {
           if (!user) throw new Error("User not authenticated");
           const fileData = await apiService.getKnowledgeBaseFileContent(item.id, user.id, user.role ? [user.role] : []);
           
+          // Update selected item with fresh data (including read receipts)
+          if(fileData) setSelectedItem(fileData);
+          
           setEditingFileMarkdown(fileData?.content || ''); 
 
           if (fileData?.fileType === 'markdown') {
@@ -152,6 +159,33 @@ const KnowledgeBasePage: React.FC = () => {
         }
       }
     }
+  };
+  
+  const handleMarkAsRead = async () => {
+      if (!selectedItem || selectedItem.itemType !== 'file') return;
+      setIsLoadingInteraction(true);
+      try {
+          const updatedFile = await apiService.markFileAsRead(selectedItem.id);
+          setSelectedItem(updatedFile);
+      } catch (err) {
+          alert((err as Error).message);
+      } finally {
+          setIsLoadingInteraction(false);
+      }
+  };
+  
+  const handleQuizComplete = async (score: number, passed: boolean) => {
+      if (!selectedItem || selectedItem.itemType !== 'file') return;
+      setIsLoadingInteraction(true);
+      try {
+          const updatedFile = await apiService.submitQuizResult(selectedItem.id, score, passed);
+          setSelectedItem(updatedFile);
+          setIsQuizModalOpen(false);
+      } catch (err) {
+           alert((err as Error).message);
+      } finally {
+          setIsLoadingInteraction(false);
+      }
   };
   
   const handleBreadcrumbClick = (index: number) => {
@@ -352,7 +386,6 @@ const KnowledgeBasePage: React.FC = () => {
     setUploadError(null);
     setUploadSuccessMessage(null);
 
-    // FIX: Explicitly type `files` as `File[]` to resolve TS errors about `unknown` type.
     const files: File[] = Array.from(event.dataTransfer.files);
     let successCount = 0;
     let errorCount = 0;
@@ -419,6 +452,16 @@ const KnowledgeBasePage: React.FC = () => {
   const dropZoneBaseClasses = "border-2 border-dashed rounded-lg p-4 transition-colors duration-200 ease-in-out";
   const dropZoneInactiveClasses = "border-brand-border";
   const dropZoneActiveClasses = "border-sky-500 bg-sky-500/10";
+  
+  const isCurrentUserRead = useMemo(() => {
+      if (selectedItem?.itemType !== 'file' || !user) return false;
+      return selectedItem.readBy?.some(r => r.userId === user.id && r.passed) || false;
+  }, [selectedItem, user]);
+
+  const currentUserReceipt = useMemo(() => {
+      if (selectedItem?.itemType !== 'file' || !user) return undefined;
+      return selectedItem.readBy?.find(r => r.userId === user.id);
+  }, [selectedItem, user]);
 
 
   return (
@@ -430,7 +473,7 @@ const KnowledgeBasePage: React.FC = () => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, currentParentId)}
-        id="drop-zone-file-list" // Make sure this ID is unique or identifiable
+        id="drop-zone-file-list" 
       >
         {isDraggingOverZone && (
             <div className="absolute inset-0 bg-sky-500/20 flex flex-col items-center justify-center pointer-events-none z-10 rounded-lg">
@@ -524,7 +567,7 @@ const KnowledgeBasePage: React.FC = () => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, currentParentId)} 
-        id="drop-zone-content-view" // Make sure this ID is unique or identifiable
+        id="drop-zone-content-view"
       >
          {isDraggingOverZone && ( 
             <div className="absolute inset-0 bg-sky-500/20 flex flex-col items-center justify-center pointer-events-none z-10 rounded-lg">
@@ -535,8 +578,42 @@ const KnowledgeBasePage: React.FC = () => {
         {selectedItem && selectedItem.itemType === 'file' ? (
             <>
             <div className="p-3 border-b border-brand-border flex justify-between items-center sticky top-0 bg-brand-card z-10">
-                <h3 className="text-md font-semibold text-brand-text-primary truncate" title={selectedItem.name}>{selectedItem.name}</h3>
-                <div>
+                <div className="flex items-center gap-2 max-w-[60%]">
+                     <h3 className="text-md font-semibold text-brand-text-primary truncate" title={selectedItem.name}>{selectedItem.name}</h3>
+                     {selectedItem.mustRead && (
+                         <Tooltip text="Обязательно к ознакомлению">
+                             <ExclamationCircleIcon className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                         </Tooltip>
+                     )}
+                     {selectedItem.quiz && (
+                          <Tooltip text="Содержит тест">
+                             <AcademicCapIcon className="h-4 w-4 text-indigo-500 flex-shrink-0" />
+                          </Tooltip>
+                     )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                {selectedItem.itemType === 'file' && selectedItem.mustRead && (
+                    <div className="mr-2">
+                         {isCurrentUserRead ? (
+                             <div className="flex items-center text-xs text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">
+                                 <CheckCircleIcon className="h-4 w-4 mr-1" />
+                                 {selectedItem.quiz ? 'Тест сдан' : 'Ознакомлен'}
+                                 {currentUserReceipt?.score !== undefined && ` (${currentUserReceipt.score}%)`}
+                             </div>
+                         ) : (
+                             <Button 
+                                size="sm" 
+                                variant="primary" 
+                                className={selectedItem.quiz ? "bg-indigo-600 hover:bg-indigo-500" : "bg-emerald-600 hover:bg-emerald-500"}
+                                onClick={() => selectedItem.quiz ? setIsQuizModalOpen(true) : handleMarkAsRead()}
+                                isLoading={isLoadingInteraction}
+                             >
+                                {selectedItem.quiz ? 'Пройти тест' : 'Ознакомиться'}
+                             </Button>
+                         )}
+                    </div>
+                )}
                 {selectedItem.fileType === 'markdown' && !selectedItem.isArchived && (
                     isEditingMarkdown ? (
                     <Button onClick={handleSaveMarkdown} isLoading={isLoadingInteraction} size="sm" variant="primary" leftIcon={<SaveIcon className="h-4 w-4"/>}>
@@ -550,6 +627,20 @@ const KnowledgeBasePage: React.FC = () => {
                 )}
                  </div>
             </div>
+            
+            {selectedItem.itemType === 'file' && user && (user.role === 'ceo' || user.role === 'manager') && selectedItem.readBy && selectedItem.readBy.length > 0 && (
+                 <div className="px-3 py-1 bg-brand-surface border-b border-brand-border text-xs">
+                    <span className="text-brand-text-muted mr-2">Ознакомились ({selectedItem.readBy.length}):</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                        {selectedItem.readBy.map((r, idx) => (
+                            <span key={idx} className={`px-1.5 rounded border ${r.passed ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' : 'bg-zinc-50 border-zinc-200 text-zinc-600'}`}>
+                                {r.userName} {r.score !== undefined ? `(${r.score}%)` : ''}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="flex-grow overflow-y-auto p-1 md:p-2 custom-scrollbar-thin">
                 {isEditingMarkdown ? (
                      <MarkdownEditor initialValue={editingFileMarkdown} onChange={setEditingFileMarkdown} height="calc(100vh - 20rem)"/>
@@ -605,6 +696,15 @@ const KnowledgeBasePage: React.FC = () => {
             isLoading={isLoadingInteraction}
             />
         )}
+        {isQuizModalOpen && selectedItem && selectedItem.itemType === 'file' && selectedItem.quiz && (
+            <QuizModal 
+                isOpen={isQuizModalOpen}
+                onClose={() => setIsQuizModalOpen(false)}
+                quiz={selectedItem.quiz}
+                onComplete={handleQuizComplete}
+                isLoading={isLoadingInteraction}
+            />
+        )}
          <DragOverlay>
             {activeDragId && items.find(i => i.id === activeDragId) ? (
                 <div className="bg-brand-secondary p-2 rounded-md shadow-lg text-brand-text-primary text-sm">
@@ -631,23 +731,24 @@ const KnowledgeBasePage: React.FC = () => {
             background: #52525b; 
         }
         
-        .prose-invert { /* Tailwind typography prose invert for dark mode */
-            --tw-prose-body: #d1d5db; /* zinc-300 */
-            --tw-prose-headings: #f4f4f5; /* zinc-100 */
-            --tw-prose-lead: #a1a1aa; /* zinc-400 */
-            --tw-prose-links: #93c5fd; /* sky-300 */
+        /* (Styles for prose-invert remain same as before) */
+        .prose-invert {
+            --tw-prose-body: #d1d5db;
+            --tw-prose-headings: #f4f4f5;
+            --tw-prose-lead: #a1a1aa;
+            --tw-prose-links: #93c5fd;
             --tw-prose-bold: #f4f4f5;
             --tw-prose-counters: #a1a1aa;
-            --tw-prose-bullets: #71717a; /* zinc-500 */
-            --tw-prose-hr: #3f3f46; /* zinc-700 */
-            --tw-prose-quotes: #e4e4e7; /* zinc-200 */
+            --tw-prose-bullets: #71717a;
+            --tw-prose-hr: #3f3f46;
+            --tw-prose-quotes: #e4e4e7;
             --tw-prose-quote-borders: #3f3f46;
             --tw-prose-captions: #a1a1aa;
             --tw-prose-code: #f4f4f5;
             --tw-prose-pre-code: #d1d5db;
-            --tw-prose-pre-bg: #18181b; /* zinc-900 */
+            --tw-prose-pre-bg: #18181b;
             --tw-prose-th-borders: #3f3f46;
-            --tw-prose-td-borders: #27272a; /* zinc-800 */
+            --tw-prose-td-borders: #27272a;
         }
         .custom-styled-html h1, .custom-styled-html h2, .custom-styled-html h3 { 
             margin-top: 0.8em; 

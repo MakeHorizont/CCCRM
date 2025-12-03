@@ -108,6 +108,27 @@ export interface KnowledgeBaseFolder {
   itemType: 'folder'; 
 }
 
+export interface QuizQuestion {
+    id: string;
+    text: string;
+    options: string[];
+    correctOptionIndex: number;
+}
+
+export interface KnowledgeBaseQuiz {
+    title: string;
+    questions: QuizQuestion[];
+    passingScorePercent: number;
+}
+
+export interface ReadReceipt {
+    userId: string;
+    userName: string;
+    timestamp: string;
+    score?: number; // If quiz passed
+    passed?: boolean;
+}
+
 export interface KnowledgeBaseFile {
   id: string;
   name: string;
@@ -122,7 +143,12 @@ export interface KnowledgeBaseFile {
   isArchived?: boolean;
   archivedAt?: string;
   tags?: string[]; 
-  itemType: 'file'; 
+  itemType: 'file';
+  
+  // New fields for Collective Intelligence
+  mustRead?: boolean; // Is it mandatory to read?
+  readBy?: ReadReceipt[]; // Who read/passed
+  quiz?: KnowledgeBaseQuiz; // Optional test attached
 }
 
 export type KnowledgeBaseItem = KnowledgeBaseFolder | KnowledgeBaseFile;

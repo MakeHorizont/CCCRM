@@ -35,6 +35,10 @@ const LoginForm: React.FC = () => {
       {formError && <p className="text-red-500 text-sm text-center">{formError}</p>}
       {authError && !formError && <p className="text-red-500 text-sm text-center">{authError}</p>}
       
+      <div className="bg-sky-50 dark:bg-sky-900/20 p-2 rounded text-xs text-center text-sky-700 dark:text-sky-200 border border-sky-200 dark:border-sky-800 mb-4">
+        Демо-доступ: <strong>demo</strong> / <strong>demo</strong>
+      </div>
+
       <Input
         id="login-identifier"
         name="loginIdentifier" // Changed name for clarity, can also be "username"
@@ -44,7 +48,7 @@ const LoginForm: React.FC = () => {
         required
         value={loginIdentifier}
         onChange={(e) => setLoginIdentifier(e.target.value)}
-        placeholder="you@example.com или ваш_логин"
+        placeholder="you@example.com или demo"
       />
       <Input
         id="password-login"

@@ -18,6 +18,7 @@ export interface ApiConfig {
     COUNCIL: boolean; // Governance & Voting
     QUALITY: boolean; // Quality Control (OTK)
     MAINTENANCE: boolean; // Equipment Maintenance & Repairs
+    INVENTORY: boolean; // Inventory Checks
   };
   MOCK_DELAY: number;
 }
@@ -41,6 +42,7 @@ export const API_CONFIG: ApiConfig = {
     COUNCIL: false,
     QUALITY: false,
     MAINTENANCE: false,
+    INVENTORY: false,
   },
   MOCK_DELAY: 300,
 };

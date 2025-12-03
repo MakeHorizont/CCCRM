@@ -10,13 +10,14 @@ import {
     PlusCircleIcon, MagnifyingGlassIcon, FunnelIcon,
     CheckCircleIcon, XCircleIcon, ArrowsUpDownIcon,
     ChevronDownIcon, ChevronUpIcon, ArchiveBoxIcon as ViewArchiveIcon,
-    ShoppingCartIcon, TruckIcon, HashtagIcon
+    ShoppingCartIcon, TruckIcon, HashtagIcon, ArrowDownTrayIcon
 } from '../UI/Icons';
 import { ORDER_STATUS_COLOR_MAP, ALL_ORDER_STATUSES, PRIORITY_ICON_MAP, ROUTE_PATHS } from '../../constants';
 import Tooltip from '../UI/Tooltip';
 import { useNavigate } from 'react-router-dom'; 
 import { useView } from '../../hooks/useView'; 
 import MobileOrderCard from './MobileOrderCard';
+import { downloadCSV } from '../../utils/exportUtils';
 
 type ViewMode = 'active' | 'archived';
 type SortableOrderKeys = 'id' | 'customerName' | 'status' | 'amount' | 'date' | 'paidAt' | 'sentAt';
@@ -73,6 +74,27 @@ const OrdersPage: React.FC = () => {
         document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleExportCSV = () => {
+      const dataToExport = sortedOrders.map(order => ({
+          ID: order.id,
+          Клиент: order.customerName,
+          Статус: order.status,
+          Сумма: order.amount,
+          Дата: new Date(order.date).toLocaleDateString('ru-RU'),
+          Оплачен: order.isPaid ? 'Да' : 'Нет',
+          Дата_оплаты: order.paidAt ? new Date(order.paidAt).toLocaleDateString('ru-RU') : '',
+          Счет_отправлен: order.isInvoiceSent ? 'Да' : 'Нет',
+          Дата_отправки_счета: order.invoiceSentAt ? new Date(order.invoiceSentAt).toLocaleDateString('ru-RU') : '',
+          Отгружен: order.sentAt ? new Date(order.sentAt).toLocaleDateString('ru-RU') : '',
+          Приоритет: order.customerPriority || '',
+          Адрес_доставки: order.shippingAddress || '',
+          Тип_доставки: order.deliveryType === 'delivery' ? 'Доставка' : 'Самовывоз',
+          Производственное_задание: order.productionOrderId || ''
+      }));
+      
+      downloadCSV(dataToExport, `orders_export_${new Date().toISOString().split('T')[0]}.csv`, 'Экспорт реестра заказов');
+  };
 
   const requestSort = (key: SortableOrderKeys) => {
     let direction: SortDirection = 'asc';
@@ -143,6 +165,7 @@ const OrdersPage: React.FC = () => {
             Заказы
         </h1>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+          <Button onClick={handleExportCSV} variant="secondary" leftIcon={<ArrowDownTrayIcon className="h-5 w-5" />} fullWidth={isMobileView}>Экспорт CSV</Button>
           <Button onClick={() => setViewMode(viewMode === 'active' ? 'archived' : 'active')} variant="secondary" leftIcon={<ViewArchiveIcon className="h-5 w-5" />} fullWidth={isMobileView}>{viewMode === 'active' ? 'Архив' : 'Активные'}</Button>
           {viewMode === 'active' && <Button onClick={() => navigate(`${ROUTE_PATHS.ORDERS}/new`)} variant="primary" fullWidth={isMobileView}><PlusCircleIcon className="h-5 w-5 mr-2" />Добавить заказ</Button>}
         </div>

@@ -1,9 +1,12 @@
 
+
 // services/api/knowledgeBaseService.ts
-import { KnowledgeBaseItem, KnowledgeBaseFolder, KnowledgeBaseFile } from '../../types';
+import { KnowledgeBaseItem, KnowledgeBaseFolder, KnowledgeBaseFile, ReadReceipt } from '../../types';
 import { mockKnowledgeBaseItems } from '../mockData/knowledgeBaseItems';
 import { delay, deepCopy } from './utils';
 import { generateId } from '../../utils/idGenerators';
+import { authService } from '../authService';
+import { systemService } from './systemService';
 import { API_CONFIG } from './config';
 import { apiClient } from '../apiClient';
 
@@ -140,6 +143,86 @@ const deleteKnowledgeBaseItem = async (itemId: string): Promise<{ success: true 
     throw new Error("Item must be archived before deletion");
 };
 
+const markFileAsRead = async (fileId: string): Promise<KnowledgeBaseFile> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KNOWLEDGE_BASE) {
+        return apiClient.post<KnowledgeBaseFile>(`/knowledge-base/files/${fileId}/read`, {});
+    }
+    
+    await delay(300);
+    const user = await authService.getCurrentUser();
+    if (!user) throw new Error("User not authenticated");
+    
+    const index = mockKnowledgeBaseItems.findIndex(i => i.id === fileId && i.itemType === 'file');
+    if (index === -1) throw new Error("File not found");
+    
+    const file = mockKnowledgeBaseItems[index] as KnowledgeBaseFile;
+    if (!file.readBy) file.readBy = [];
+    
+    // Check if already read
+    if (!file.readBy.some(r => r.userId === user.id)) {
+        file.readBy.push({
+            userId: user.id,
+            userName: user.name || user.email,
+            timestamp: new Date().toISOString(),
+            passed: true // Just reading counts as passed if no quiz
+        });
+        
+        await systemService.logEvent(
+            'Ознакомление с документом',
+            `Пользователь ${user.name} ознакомился с документом "${file.name}"`,
+            'auth',
+            file.id,
+            'KnowledgeBaseFile'
+        );
+    }
+    
+    mockKnowledgeBaseItems[index] = file;
+    return deepCopy(file);
+};
+
+const submitQuizResult = async (fileId: string, score: number, passed: boolean): Promise<KnowledgeBaseFile> => {
+     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.KNOWLEDGE_BASE) {
+        return apiClient.post<KnowledgeBaseFile>(`/knowledge-base/files/${fileId}/quiz`, { score, passed });
+    }
+    
+    await delay(400);
+    const user = await authService.getCurrentUser();
+    if (!user) throw new Error("User not authenticated");
+    
+    const index = mockKnowledgeBaseItems.findIndex(i => i.id === fileId && i.itemType === 'file');
+    if (index === -1) throw new Error("File not found");
+    
+    const file = mockKnowledgeBaseItems[index] as KnowledgeBaseFile;
+    if (!file.readBy) file.readBy = [];
+    
+    // Update or add receipt
+    const existingIndex = file.readBy.findIndex(r => r.userId === user.id);
+    const receipt: ReadReceipt = {
+        userId: user.id,
+        userName: user.name || user.email,
+        timestamp: new Date().toISOString(),
+        score,
+        passed
+    };
+    
+    if (existingIndex > -1) {
+        file.readBy[existingIndex] = receipt;
+    } else {
+        file.readBy.push(receipt);
+    }
+    
+    await systemService.logEvent(
+        'Прохождение теста',
+        `Пользователь ${user.name} ${passed ? 'сдал' : 'не сдал'} тест по "${file.name}". Результат: ${score}%`,
+        'auth',
+        file.id,
+        'KnowledgeBaseFile'
+    );
+    
+    mockKnowledgeBaseItems[index] = file;
+    return deepCopy(file);
+};
+
 export const knowledgeBaseService = {
     getKnowledgeBaseItems,
     getKnowledgeBaseFileContent,
@@ -148,4 +231,6 @@ export const knowledgeBaseService = {
     updateKnowledgeBaseItem,
     archiveKnowledgeBaseItem,
     deleteKnowledgeBaseItem,
+    markFileAsRead,
+    submitQuizResult,
 };
