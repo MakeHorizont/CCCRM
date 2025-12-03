@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { DevicePhoneMobileIcon, ComputerDesktopIcon, Cog8ToothIcon, ArrowLeftIcon, SunIcon, MoonIcon, FireIcon, MagnifyingGlassIcon } from './UI/Icons';
+import { DevicePhoneMobileIcon, ComputerDesktopIcon, Cog8ToothIcon, ArrowLeftIcon, SunIcon, MoonIcon, FireIcon, MagnifyingGlassIcon, ScaleIcon } from './UI/Icons';
 import { useView } from '../hooks/useView';
 import { useTheme } from '../contexts/ThemeContext';
 import Tooltip from './UI/Tooltip';
@@ -43,10 +43,15 @@ const Navbar: React.FC<NavbarProps> = () => {
   const handleOpenProfile = () => {
     navigate(ROUTE_PATHS.PROFILE);
   };
+  
+  const isMobilization = systemMode === 'mobilization';
+  const headerClass = isMobilization 
+    ? 'bg-red-50 border-b-2 border-red-500 dark:bg-red-950/30 dark:border-red-700' 
+    : 'bg-brand-surface border-b border-brand-border';
 
   return (
     <>
-      <header className={`h-16 border-b flex items-center justify-between px-4 sm:px-6 transition-colors duration-300 ${systemMode === 'mobilization' ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-brand-surface border-brand-border'}`}>
+      <header className={`h-16 flex items-center justify-between px-4 sm:px-6 transition-all duration-500 ${headerClass}`}>
         <div className="flex items-center">
           {showBackButton && (
             <Tooltip text="Назад" position="bottom">
@@ -62,10 +67,15 @@ const Navbar: React.FC<NavbarProps> = () => {
         </div>
         
         <div className="flex-1 flex justify-center sm:justify-start sm:ml-4">
-           {systemMode === 'mobilization' && (
-              <div className="flex items-center px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 rounded-full text-xs font-bold animate-pulse">
-                  <FireIcon className="h-4 w-4 mr-1"/>
+           {isMobilization ? (
+              <div className="flex items-center px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 rounded-md text-xs font-bold animate-pulse shadow-sm border border-red-200 dark:border-red-800 cursor-help" title="Включен режим строгой экономии и дисциплины. Запуск производства без сырья заблокирован.">
+                  <FireIcon className="h-4 w-4 mr-2"/>
                   РЕЖИМ МОБИЛИЗАЦИИ
+              </div>
+           ) : (
+              <div className="hidden md:flex items-center px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-md text-xs font-medium border border-emerald-100 dark:border-emerald-800/50">
+                  <ScaleIcon className="h-4 w-4 mr-2"/>
+                  Режим Развития
               </div>
            )}
         </div>
