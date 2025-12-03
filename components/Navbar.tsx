@@ -45,8 +45,10 @@ const Navbar: React.FC<NavbarProps> = () => {
   };
   
   const isMobilization = systemMode === 'mobilization';
+  
+  // Dynamic header class based on mode
   const headerClass = isMobilization 
-    ? 'bg-red-50 border-b-2 border-red-500 dark:bg-red-950/30 dark:border-red-700' 
+    ? 'bg-red-50 border-b-2 border-red-500 dark:bg-red-950/40 dark:border-red-600 shadow-red-100 dark:shadow-none' 
     : 'bg-brand-surface border-b border-brand-border';
 
   return (
@@ -68,12 +70,12 @@ const Navbar: React.FC<NavbarProps> = () => {
         
         <div className="flex-1 flex justify-center sm:justify-start sm:ml-4">
            {isMobilization ? (
-              <div className="flex items-center px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 rounded-md text-xs font-bold animate-pulse shadow-sm border border-red-200 dark:border-red-800 cursor-help" title="Включен режим строгой экономии и дисциплины. Запуск производства без сырья заблокирован.">
-                  <FireIcon className="h-4 w-4 mr-2"/>
+              <div className="flex items-center px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 rounded-md text-xs font-bold animate-pulse shadow-sm border border-red-200 dark:border-red-800 cursor-help select-none" title="Включен режим строгой экономии и дисциплины. Запуск производства без сырья заблокирован.">
+                  <FireIcon className="h-4 w-4 mr-2 animate-bounce"/>
                   РЕЖИМ МОБИЛИЗАЦИИ
               </div>
            ) : (
-              <div className="hidden md:flex items-center px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-md text-xs font-medium border border-emerald-100 dark:border-emerald-800/50">
+              <div className="hidden md:flex items-center px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-md text-xs font-medium border border-emerald-100 dark:border-emerald-800/50 select-none">
                   <ScaleIcon className="h-4 w-4 mr-2"/>
                   Режим Развития
               </div>
@@ -128,13 +130,13 @@ const Navbar: React.FC<NavbarProps> = () => {
             <Button 
               onClick={handleOpenProfile} 
               variant="ghost"
-              className="flex items-center space-x-2 sm:space-x-3 p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+              className="flex items-center space-x-2 sm:space-x-3 p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary group"
               aria-label="Открыть профиль"
             >
-              <span className="text-sm text-brand-text-secondary hidden sm:block">
+              <span className="text-sm text-brand-text-secondary hidden sm:block group-hover:text-brand-text-primary">
                 {user.name || user.email}
               </span>
-              <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-brand-text-primary text-sm font-semibold border border-brand-border group-hover:border-brand-primary">
+              <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-brand-text-primary text-sm font-semibold border border-brand-border group-hover:border-brand-primary transition-colors">
                 {user.name ? user.name.substring(0,1).toUpperCase() : user.email.substring(0,1).toUpperCase()}
               </div>
             </Button>

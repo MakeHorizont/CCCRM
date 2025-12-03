@@ -64,7 +64,7 @@ const TechnologiesPage: React.FC = () => {
       const producible = itemsData.filter(item => item.billOfMaterials && item.billOfMaterials.length > 0);
       setProducibleItems(producible);
       
-      const cardsMap = (cardsData as TechnologyCard[]).reduce<Record<string, TechnologyCard>>((acc, card) => {
+      const cardsMap = (cardsData as TechnologyCard[]).reduce<Record<string, TechnologyCard>>((acc, card: TechnologyCard) => {
         acc[card.warehouseItemId] = card;
         return acc;
       }, {});

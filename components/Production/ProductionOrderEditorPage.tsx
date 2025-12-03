@@ -21,7 +21,7 @@ const ALL_PRODUCTION_STATUSES: ProductionOrderStatus[] = [
   'Контроль качества', 'Приостановлено', 'Завершено', 'Отменено'
 ];
 
-// Statuses that require materials to be physically present
+// Statuses that require materials to be physically present (Active Production)
 const MATERIAL_DEPENDENT_STATUSES: ProductionOrderStatus[] = [
     'Готово к запуску', 'В производстве', 'Контроль качества', 'Завершено'
 ];
@@ -48,7 +48,6 @@ const ProductionOrderEditorPage: React.FC = () => {
     const [newItemPlannedQuantity, setNewItemPlannedQuantity] = useState<number>(1);
     
     const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
-    const [isCreatePRModalOpen, setIsCreatePRModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchPageData = async () => {
@@ -88,15 +87,15 @@ const ProductionOrderEditorPage: React.FC = () => {
     }, [orderId, isNew, user]);
     
     // --- PHYSICS ENGINE: CALCULATE SHORTAGE ---
+    // Automatically calculates if we have enough raw materials in HouseholdItems
     const shortageAnalysis = useMemo(() => {
-        if (!orderData.orderItems) return { hasShortage: false, deficits: [] };
+        if (!orderData.orderItems || orderData.orderItems.length === 0) return { hasShortage: false, deficits: [] };
 
         const requiredMaterials = new Map<string, { needed: number, name: string, unit: string }>();
 
-        // 1. Aggregate requirements
+        // 1. Aggregate requirements from all items in the order
         orderData.orderItems.forEach(item => {
              // Prefer snapshot if exists (frozen history), else try to find current item (for new orders)
-             // But for live editing, we might want current BOM if snapshot is empty (new item)
              const product = availableWarehouseItems.find(w => w.id === item.warehouseItemId);
              const bom = item.billOfMaterialsSnapshot && item.billOfMaterialsSnapshot.length > 0 
                 ? item.billOfMaterialsSnapshot 
@@ -112,11 +111,13 @@ const ProductionOrderEditorPage: React.FC = () => {
         const deficits: { name: string, needed: number, inStock: number, deficit: number, unit: string }[] = [];
         let hasShortage = false;
 
-        // 2. Compare with Stock
+        // 2. Compare with Stock (HouseholdItems)
         requiredMaterials.forEach((req, hhItemId) => {
             const stockItem = availableHouseholdItems.find(h => h.id === hhItemId);
             const inStock = stockItem ? stockItem.quantity : 0;
-            if (inStock < req.needed) {
+            
+            // Allow small floating point error tolerance (e.g. 0.0001)
+            if (inStock < req.needed - 0.0001) {
                 hasShortage = true;
                 deficits.push({
                     name: req.name,
@@ -135,7 +136,7 @@ const ProductionOrderEditorPage: React.FC = () => {
     const handleConfirmSave = async () => {
         if (!orderData.name?.trim()) { setError("Название обязательно"); setIsSaveConfirmOpen(false); return; }
         
-        // Mobilization Mode Enforcement
+        // Mobilization Mode Enforcement: Block saving active status if shortage exists
         if (systemMode === 'mobilization' && shortageAnalysis.hasShortage) {
              if (MATERIAL_DEPENDENT_STATUSES.includes(orderData.status || 'Планируется')) {
                  setError("РЕЖИМ МОБИЛИЗАЦИИ: Нельзя перевести задание в активный статус при дефиците сырья. Измените статус на 'Ожидает сырья' или пополните склад.");
@@ -146,10 +147,15 @@ const ProductionOrderEditorPage: React.FC = () => {
 
         setIsSaving(true);
         try {
+            const payload = {
+                ...orderData,
+                hasMaterialShortage: shortageAnalysis.hasShortage
+            };
+
             if (orderData.id) {
-                await apiService.updateProductionOrder(orderData as ProductionOrder);
+                await apiService.updateProductionOrder(payload as ProductionOrder);
             } else {
-                await apiService.addProductionOrder(orderData as any);
+                await apiService.addProductionOrder(payload as any);
             }
             navigate(ROUTE_PATHS.PRODUCTION);
         } catch(e) {
@@ -187,7 +193,7 @@ const ProductionOrderEditorPage: React.FC = () => {
     
     const handleCreatePurchaseRequest = async () => {
         if (!orderData.id || !user) {
-            setError("Сначала сохраните задание.");
+            setError("Сначала сохраните задание как 'Ожидает сырья'.");
             return;
         }
         setIsSaving(true);
@@ -207,6 +213,8 @@ const ProductionOrderEditorPage: React.FC = () => {
     
     const pageTitle = isNew ? 'Новое производственное задание' : (mode === 'edit' ? `Редактирование: ${orderData.name}` : `Задание: ${orderData.name}`);
     const isFormDisabled = mode === 'view' || isSaving;
+    
+    // Logic for locking status dropdown
     const isStatusBlockedByMobilization = systemMode === 'mobilization' && shortageAnalysis.hasShortage;
 
     return (
@@ -228,25 +236,25 @@ const ProductionOrderEditorPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* SHORTAGE BANNER */}
+                {/* SHORTAGE BANNER (PHYSICS ENGINE FEEDBACK) */}
                 {shortageAnalysis.hasShortage && (
-                    <div className={`p-4 rounded-lg border-l-4 shadow-sm mb-4 ${systemMode === 'mobilization' ? 'bg-red-50 border-red-500' : 'bg-amber-50 border-amber-500'}`}>
+                    <div className={`p-4 rounded-lg border-l-4 shadow-sm mb-4 transition-all animate-fade-in ${systemMode === 'mobilization' ? 'bg-red-50 border-red-500 dark:bg-red-900/20 dark:border-red-600' : 'bg-amber-50 border-amber-500 dark:bg-amber-900/20 dark:border-amber-600'}`}>
                         <div className="flex items-start">
-                            <ExclamationTriangleIcon className={`h-6 w-6 mr-3 flex-shrink-0 ${systemMode === 'mobilization' ? 'text-red-500' : 'text-amber-500'}`}/>
+                            <ExclamationTriangleIcon className={`h-6 w-6 mr-3 flex-shrink-0 ${systemMode === 'mobilization' ? 'text-red-500 animate-pulse' : 'text-amber-500'}`}/>
                             <div className="flex-grow">
-                                <h3 className={`text-lg font-bold ${systemMode === 'mobilization' ? 'text-red-800' : 'text-amber-800'}`}>
+                                <h3 className={`text-lg font-bold ${systemMode === 'mobilization' ? 'text-red-800 dark:text-red-200' : 'text-amber-800 dark:text-amber-200'}`}>
                                     {systemMode === 'mobilization' ? 'БЛОКИРОВКА ЗАПУСКА: ДЕФИЦИТ СЫРЬЯ' : 'ПРЕДУПРЕЖДЕНИЕ: ДЕФИЦИТ СЫРЬЯ'}
                                 </h3>
-                                <p className={`text-sm mb-2 ${systemMode === 'mobilization' ? 'text-red-700' : 'text-amber-700'}`}>
+                                <p className={`text-sm mb-2 ${systemMode === 'mobilization' ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
                                     {systemMode === 'mobilization' 
-                                        ? 'В режиме мобилизации запуск производства невозможен без полного обеспечения ресурсами.' 
-                                        : 'Недостаточно материалов. Вы можете запустить задание под свою ответственность, но это приведет к отрицательным остаткам.'}
+                                        ? 'В режиме "Мобилизация" запуск производства невозможен без полного обеспечения ресурсами. Пополните склад перед сменой статуса.' 
+                                        : 'Недостаточно материалов. Вы можете запустить задание под свою ответственность (уйдем в минус), но это не рекомендуется.'}
                                 </p>
-                                <div className="bg-white/50 rounded p-2 text-sm">
+                                <div className={`bg-white/70 dark:bg-black/30 rounded p-2 text-sm max-h-32 overflow-y-auto custom-scrollbar-thin ${systemMode === 'mobilization' ? 'border border-red-200' : ''}`}>
                                     <ul className="list-disc list-inside space-y-1">
                                         {shortageAnalysis.deficits.map((def, idx) => (
                                             <li key={idx} className="text-brand-text-primary">
-                                                <strong>{def.name}:</strong> Нужно <span className="text-red-600">{def.needed.toFixed(2)}</span>, на складе {def.inStock.toFixed(2)}. 
+                                                <strong>{def.name}:</strong> Нужно <span className="text-red-600 font-semibold">{def.needed.toFixed(2)}</span>, на складе {def.inStock.toFixed(2)}. 
                                                 Дефицит: <span className="font-bold text-red-600">-{def.deficit.toFixed(2)} {def.unit}</span>
                                             </li>
                                         ))}
@@ -254,8 +262,15 @@ const ProductionOrderEditorPage: React.FC = () => {
                                 </div>
                                 {orderData.id && (
                                     <div className="mt-3">
-                                        <Button size="sm" onClick={handleCreatePurchaseRequest} isLoading={isSaving} leftIcon={<ShoppingCartIcon className="h-4 w-4"/>} className="bg-white border border-brand-border hover:bg-gray-50 text-brand-text-primary shadow-sm">
-                                            Создать заявку на закупку
+                                        <Button 
+                                            type="button"
+                                            size="sm" 
+                                            onClick={handleCreatePurchaseRequest} 
+                                            isLoading={isSaving} 
+                                            leftIcon={<ShoppingCartIcon className="h-4 w-4"/>} 
+                                            className="bg-white dark:bg-zinc-800 border border-brand-border hover:bg-gray-100 dark:hover:bg-zinc-700 text-brand-text-primary shadow-sm"
+                                        >
+                                            Создать заявку на закупку (из дефицита)
                                         </Button>
                                     </div>
                                 )}
@@ -266,21 +281,21 @@ const ProductionOrderEditorPage: React.FC = () => {
 
                 <Card>
                     <div className="space-y-4">
-                        {error && <p className="text-red-500 p-2 bg-red-50 rounded">{error}</p>}
+                        {error && <p className="text-red-500 p-2 bg-red-50 dark:bg-red-900/20 rounded">{error}</p>}
                         
                         <Input id="po-name" name="name" label="Название/Цель задания *" value={orderData.name || ''} onChange={handleInputChange} required disabled={isFormDisabled}/>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                              <div>
-                                <label htmlFor="po-assignedToId" className="block text-sm font-medium mb-1">Ответственный</label>
+                                <label htmlFor="po-assignedToId" className="block text-sm font-medium mb-1 text-brand-text-primary">Ответственный</label>
                                 <select id="po-assignedToId" name="assignedToId" value={orderData.assignedToId || ''} onChange={handleInputChange} disabled={isFormDisabled}
-                                    className="w-full bg-brand-card border border-brand-border rounded-lg p-2.5">
+                                    className="w-full bg-brand-card border border-brand-border rounded-lg p-2.5 text-brand-text-primary focus:ring-sky-500 focus:border-sky-500">
                                     <option value="">Не назначен</option>
                                     {usersForAssigning.map(u => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label htmlFor="po-status" className="block text-sm font-medium mb-1">Статус</label>
+                                <label htmlFor="po-status" className="block text-sm font-medium mb-1 text-brand-text-primary">Статус</label>
                                 <div className="relative">
                                     <select 
                                         id="po-status" 
@@ -288,13 +303,14 @@ const ProductionOrderEditorPage: React.FC = () => {
                                         value={orderData.status || 'Планируется'} 
                                         onChange={handleInputChange} 
                                         disabled={isFormDisabled}
-                                        className={`w-full bg-brand-card border rounded-lg p-2.5 ${isStatusBlockedByMobilization ? 'border-red-300 bg-red-50 text-gray-500' : 'border-brand-border'}`}
+                                        className={`w-full bg-brand-card border rounded-lg p-2.5 text-brand-text-primary focus:ring-sky-500 focus:border-sky-500 ${isStatusBlockedByMobilization ? 'border-red-300 ring-2 ring-red-100 dark:ring-red-900/30' : 'border-brand-border'}`}
                                     >
                                         {ALL_PRODUCTION_STATUSES.map(s => (
                                             <option 
                                                 key={s} 
                                                 value={s} 
                                                 disabled={isStatusBlockedByMobilization && MATERIAL_DEPENDENT_STATUSES.includes(s)}
+                                                className={isStatusBlockedByMobilization && MATERIAL_DEPENDENT_STATUSES.includes(s) ? 'text-gray-400 bg-gray-100' : ''}
                                             >
                                                 {s} {isStatusBlockedByMobilization && MATERIAL_DEPENDENT_STATUSES.includes(s) ? '(Блок: нет сырья)' : ''}
                                             </option>
@@ -302,12 +318,15 @@ const ProductionOrderEditorPage: React.FC = () => {
                                     </select>
                                     {isStatusBlockedByMobilization && !isFormDisabled && (
                                         <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none">
-                                            <LockClosedIcon className="h-4 w-4 text-red-500"/>
+                                            <LockClosedIcon className="h-5 w-5 text-red-500"/>
                                         </div>
                                     )}
                                 </div>
                                 {isStatusBlockedByMobilization && !isFormDisabled && (
-                                    <p className="text-xs text-red-500 mt-1">Статусы запуска заблокированы режимом Мобилизации.</p>
+                                    <p className="text-xs text-red-500 mt-1 flex items-center">
+                                        <LockClosedIcon className="h-3 w-3 mr-1"/>
+                                        Активные статусы заблокированы режимом Мобилизации.
+                                    </p>
                                 )}
                             </div>
                         </div>
@@ -317,17 +336,16 @@ const ProductionOrderEditorPage: React.FC = () => {
                             <Input id="po-plannedEndDate" name="plannedEndDate" type="date" label="План. дата завершения" value={orderData.plannedEndDate?.split('T')[0] || ''} onChange={handleInputChange} disabled={isFormDisabled}/>
                         </div>
 
-                        {/* ... (Existing Planned Order Checkbox and Sales Order Link) ... */}
                         <div className="flex items-center space-x-4">
-                            <label className="flex items-center">
-                                <input type="checkbox" name="isPlannedOrder" checked={orderData.isPlannedOrder || false} onChange={handleInputChange} className="h-4 w-4 text-sky-500" disabled={isFormDisabled}/>
-                                <span className="ml-2 text-sm">Плановое задание (на склад)</span>
+                            <label className="flex items-center cursor-pointer">
+                                <input type="checkbox" name="isPlannedOrder" checked={orderData.isPlannedOrder || false} onChange={handleInputChange} className="h-4 w-4 text-sky-500 border-brand-border rounded focus:ring-sky-500" disabled={isFormDisabled}/>
+                                <span className="ml-2 text-sm text-brand-text-primary">Плановое задание (на склад)</span>
                             </label>
                             {!orderData.isPlannedOrder && (
                                 <div className="flex-grow">
                                     <label htmlFor="po-relatedSalesOrderId" className="sr-only">Связанный заказ</label>
                                     <select id="po-relatedSalesOrderId" name="relatedSalesOrderId" value={orderData.relatedSalesOrderId || ''} onChange={handleInputChange} disabled={isFormDisabled}
-                                        className="w-full bg-brand-card border border-brand-border rounded-lg p-2.5 text-brand-text-primary focus:ring-sky-500 text-sm">
+                                        className="w-full bg-brand-card border border-brand-border rounded-lg p-2.5 text-brand-text-primary focus:ring-sky-500 focus:border-sky-500 text-sm">
                                         <option value="">Связать с заказом клиента...</option>
                                         {activeSalesOrders.map(so => <option key={so.id} value={so.id}>#{so.id} - {so.customerName}</option>)}
                                     </select>
@@ -357,16 +375,19 @@ const ProductionOrderEditorPage: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
+                            {(orderData.orderItems || []).length === 0 && (
+                                <p className="text-sm text-brand-text-muted text-center italic py-2">Список продукции пуст. Добавьте товары.</p>
+                            )}
                         </div>
 
                         {!isFormDisabled && (
                             <div className="pt-3 border-t border-brand-border space-y-1">
-                                <h5 className="text-sm font-medium">Добавить продукт</h5>
+                                <h5 className="text-sm font-medium text-brand-text-primary">Добавить продукт</h5>
                                 <div className="flex items-end space-x-2">
                                     <div className="flex-grow">
                                         <label htmlFor="add-wh-item-select" className="sr-only">Продукт</label>
                                         <select id="add-wh-item-select" value={selectedWarehouseItemId} onChange={(e) => setSelectedWarehouseItemId(e.target.value)}
-                                            className="w-full bg-brand-card border border-brand-border rounded-lg p-2 text-brand-text-primary focus:ring-sky-500">
+                                            className="w-full bg-brand-card border border-brand-border rounded-lg p-2 text-brand-text-primary focus:ring-sky-500 focus:border-sky-500">
                                             <option value="" disabled>Выберите продукт со склада...</option>
                                             {availableWarehouseItems.filter(wh => !(orderData.orderItems || []).some(i => i.warehouseItemId === wh.id)).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
                                         </select>
