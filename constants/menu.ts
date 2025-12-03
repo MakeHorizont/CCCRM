@@ -9,7 +9,7 @@ import {
     DocumentIcon, BeakerIcon, PlayCircleIcon, CalculatorIcon, BanknotesIcon, ArrowsUpDownIcon,
     ChatBubbleOvalLeftEllipsisIcon, BellIcon, ArrowTrendingUpIcon, CircleStackIcon, BriefcaseIcon, SparklesIcon,
     AwardIcon, ListBulletIcon, DocumentChartBarIcon as ChartBarIcon, HeartIcon, FlagIcon, ArrowPathIcon, EyeIcon, ScaleIcon,
-    ChartPieIcon, ShieldCheckIcon // Added ShieldCheckIcon
+    ChartPieIcon, ShieldCheckIcon, WrenchIcon // Added WrenchIcon
 } from '../components/UI/Icons';
 import { User } from '../types';
 import { ROUTE_PATHS } from './paths';
@@ -40,9 +40,18 @@ export const MENU_ITEMS: MenuItem[] = [
   { name: 'Производство', isHeader: true, icon: ProductionIcon, iconName: 'ProductionIcon' },
   { name: 'Заказы', path: ROUTE_PATHS.ORDERS, icon: ShoppingCartIcon, iconName: 'ShoppingCartIcon' },
   { name: 'Произв. задания', path: ROUTE_PATHS.PRODUCTION, icon: ProductionIcon, iconName: 'ProductionIcon' },
-  { name: 'ОТК (Качество)', path: ROUTE_PATHS.QUALITY_CONTROL, icon: ShieldCheckIcon, iconName: 'ShieldCheckIcon' }, // New Item
+  { name: 'ОТК (Качество)', path: ROUTE_PATHS.QUALITY_CONTROL, icon: ShieldCheckIcon, iconName: 'ShieldCheckIcon' },
   { name: 'Технологии', path: ROUTE_PATHS.TECHNOLOGIES, icon: BeakerIcon, iconName: 'BeakerIcon' },
-  { name: 'Оборудование', path: ROUTE_PATHS.EQUIPMENT, icon: CubeIcon, iconName: 'CubeIcon' },
+  {
+    name: 'Оборудование',
+    icon: CubeIcon,
+    iconName: 'CubeIcon',
+    isParent: true,
+    subMenu: [
+      { name: 'Каталог', path: ROUTE_PATHS.EQUIPMENT, icon: CubeIcon, iconName: 'CubeIcon' },
+      { name: 'Обслуживание (ППР)', path: ROUTE_PATHS.MAINTENANCE, icon: WrenchIcon, iconName: 'WrenchIcon' },
+    ]
+  },
   { name: 'Закупки', path: ROUTE_PATHS.PURCHASING, icon: CalculatorIcon, iconName: 'CalculatorIcon' },
   {
     name: 'Склад',
@@ -141,7 +150,8 @@ export const MENU_ITEMS_FOR_MOBILE_NAV: MobileNavItemConfig[] = MENU_ITEMS.reduc
 const ensureCoreItems = (config: MobileNavItemConfig[]): MobileNavItemConfig[] => {
     const corePaths = [
         ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.ANALYTICS, ROUTE_PATHS.ORDERS, ROUTE_PATHS.DOCUMENTS, ROUTE_PATHS.PRODUCTION,
-        ROUTE_PATHS.WAREHOUSE, ROUTE_PATHS.KANBAN_HOME, ROUTE_PATHS.KNOWLEDGE_BASE, ROUTE_PATHS.COUNCIL, ROUTE_PATHS.QUALITY_CONTROL
+        ROUTE_PATHS.WAREHOUSE, ROUTE_PATHS.KANBAN_HOME, ROUTE_PATHS.KNOWLEDGE_BASE, ROUTE_PATHS.COUNCIL, ROUTE_PATHS.QUALITY_CONTROL,
+        ROUTE_PATHS.EQUIPMENT, ROUTE_PATHS.MAINTENANCE // Added Maintenance
     ];
     let result = [...config];
     corePaths.forEach(corePath => {

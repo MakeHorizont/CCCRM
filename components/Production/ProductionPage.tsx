@@ -7,7 +7,7 @@ import Card from '../UI/Card';
 import Button from '../UI/Button';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import Input from '../UI/Input';
-import { CogIcon as ProductionIcon, PlusCircleIcon, MagnifyingGlassIcon, FunnelIcon, TableCellsIcon, ArchiveBoxIcon as ViewArchiveIcon, PencilSquareIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, TrashIcon, ExclamationTriangleIcon, PlayCircleIcon, ChevronDownIcon, ChevronUpIcon, LightBulbIcon, DevicePhoneMobileIcon, FireIcon, ScaleIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from '../UI/Icons';
+import { CogIcon as ProductionIcon, PlusCircleIcon, MagnifyingGlassIcon, FunnelIcon, TableCellsIcon, ArchiveBoxIcon as ViewArchiveIcon, PencilSquareIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, TrashIcon, ExclamationTriangleIcon, PlayCircleIcon, ChevronDownIcon, ChevronUpIcon, LightBulbIcon, DevicePhoneMobileIcon, FireIcon, ScaleIcon, ClockIcon, CheckCircleIcon, XCircleIcon, CalendarDaysIcon } from '../UI/Icons';
 import { PRODUCTION_ORDER_STATUS_COLOR_MAP, ROUTE_PATHS } from '../../constants';
 import ConfirmationModal from '../UI/ConfirmationModal';
 import Tooltip from '../UI/Tooltip';
@@ -16,9 +16,10 @@ import { useView } from '../../hooks/useView';
 import { useNavigate } from 'react-router-dom';
 import CreateTopicModal from '../Discussions/CreateTopicModal';
 import { useAppSettings } from '../../hooks/useAppSettings';
+import ProductionSchedule from './ProductionSchedule';
 
 type ViewMode = 'active' | 'archived';
-type ActiveTab = 'orders' | 'handovers';
+type ActiveTab = 'orders' | 'handovers' | 'schedule';
 
 // Mobile Card Component
 const MobileProductionOrderCard: React.FC<{
@@ -253,13 +254,22 @@ const ProductionPage: React.FC = () => {
           <button onClick={() => setActiveTab('orders')} className={tabButtonStyle('orders')}>
             <ProductionIcon className="h-5 w-5 mr-2"/> Задания
           </button>
+          <button onClick={() => setActiveTab('schedule')} className={tabButtonStyle('schedule')}>
+            <CalendarDaysIcon className="h-5 w-5 mr-2"/> График (План)
+          </button>
           <button onClick={() => setActiveTab('handovers')} className={tabButtonStyle('handovers')}>
             <ClockIcon className="h-5 w-5 mr-2"/> Журнал Смен
           </button>
         </nav>
       </div>
 
-      <Card>
+      <Card className={activeTab === 'schedule' ? '!p-0 overflow-hidden border-0 bg-transparent shadow-none' : ''}>
+        {activeTab === 'schedule' && (
+             <div className="h-[600px]">
+                 <ProductionSchedule orders={productionOrders} />
+             </div>
+        )}
+        
         {activeTab === 'orders' && (
             <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

@@ -42,10 +42,11 @@ import KnowledgeBasePage from './components/KnowledgeBase/KnowledgeBasePage';
 import MailPage from './components/Mail/MailPage';
 import EquipmentListPage from './components/Equipment/EquipmentListPage';
 import EquipmentEditorPage from './components/Equipment/EquipmentEditorPage';
+import MaintenancePage from './components/Maintenance/MaintenancePage'; // New Import
 import AuditLogPage from './components/System/AuditLogPage'; 
 import CouncilPage from './components/Council/CouncilPage';
 import AnalyticsPage from './components/Analytics/AnalyticsPage'; 
-import QualityControlPage from './components/Quality/QualityControlPage'; // New Import
+import QualityControlPage from './components/Quality/QualityControlPage'; 
 
 import { useAuth } from './hooks/useAuth';
 import { ROUTE_PATHS } from './constants';
@@ -155,7 +156,7 @@ const App: React.FC = () => {
                 <Route path={`${ROUTE_PATHS.STORAGES.substring(1)}/:storageId`} element={<StorageEditorPage />} />
 
                 {/* Orders Routes */}
-                <Route path={`${ROUTE_PATHS.ORDERS.substring(1)}`} element={<OrdersPage />} />
+                <Route path={ROUTE_PATHS.ORDERS.substring(1)} element={<OrdersPage />} />
                 <Route path={`${ROUTE_PATHS.ORDERS.substring(1)}/new`} element={<OrderEditorPage />} />
                 <Route path={`${ROUTE_PATHS.ORDERS.substring(1)}/:orderId`} element={<OrderEditorPage />} />
 
@@ -181,6 +182,7 @@ const App: React.FC = () => {
                 <Route path={ROUTE_PATHS.EQUIPMENT.substring(1)} element={<EquipmentListPage />} />
                 <Route path={`${ROUTE_PATHS.EQUIPMENT.substring(1)}/new`} element={<EquipmentEditorPage />} />
                 <Route path={`${ROUTE_PATHS.EQUIPMENT.substring(1)}/:equipmentId`} element={<EquipmentEditorPage />} />
+                <Route path={ROUTE_PATHS.MAINTENANCE.substring(1)} element={<MaintenancePage />} />
 
                 {/* Financial Accounting Routes */}
                 <Route path={ROUTE_PATHS.FINANCIAL_ACCOUNTING.substring(1)} element={<FinancialAccountingPage />} />

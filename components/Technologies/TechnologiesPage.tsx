@@ -56,15 +56,15 @@ const TechnologiesPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [itemsData, cardsData] = await Promise.all([
+      const [itemsData, cardsData] = (await Promise.all([
         apiService.getWarehouseItems({ viewMode: 'active' }), 
         apiService.getTechnologyCards({ viewMode })
-      ]) as [WarehouseItem[], TechnologyCard[]];
+      ])) as [WarehouseItem[], TechnologyCard[]];
       
       const producible = itemsData.filter(item => item.billOfMaterials && item.billOfMaterials.length > 0);
       setProducibleItems(producible);
       
-      const cardsMap = (cardsData as TechnologyCard[]).reduce((acc, card) => {
+      const cardsMap = (cardsData as TechnologyCard[]).reduce((acc: Record<string, TechnologyCard>, card: TechnologyCard) => {
         acc[card.warehouseItemId] = card;
         return acc;
       }, {} as Record<string, TechnologyCard>);

@@ -35,6 +35,7 @@ export const ROUTE_PATHS = {
   FINANCIAL_ACCOUNTING: '/financial-accounting',
   TRANSACTIONS: '/transactions',
   EQUIPMENT: '/equipment',
+  MAINTENANCE: '/equipment/maintenance', // New path
   DOCUMENTS: '/documents',
   PRINT_DOCUMENT: '/documents/print',
   NOTIFICATIONS: '/notifications',

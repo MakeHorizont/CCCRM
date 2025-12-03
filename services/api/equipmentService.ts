@@ -247,6 +247,46 @@ const performMaintenance = async (id: string, recordData: Omit<MaintenanceRecord
     return deepCopy(equipment);
 };
 
+const getAllMaintenanceHistory = async (): Promise<{ record: MaintenanceRecord, equipmentName: string, equipmentId: string }[]> => {
+    await delay(400);
+    const history: { record: MaintenanceRecord, equipmentName: string, equipmentId: string }[] = [];
+    
+    mockEquipment.forEach(equip => {
+        if (equip.maintenanceHistory) {
+            equip.maintenanceHistory.forEach(rec => {
+                history.push({
+                    record: rec,
+                    equipmentName: equip.name,
+                    equipmentId: equip.id
+                });
+            });
+        }
+    });
+    
+    return history.sort((a, b) => new Date(b.record.date).getTime() - new Date(a.record.date).getTime());
+};
+
+const getUpcomingMaintenance = async (): Promise<{ equipment: EquipmentItem, daysUntilDue: number }[]> => {
+    await delay(400);
+    const upcoming: { equipment: EquipmentItem, daysUntilDue: number }[] = [];
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    mockEquipment.forEach(equip => {
+        if (!equip.isArchived && equip.nextMaintenanceDate) {
+            const nextDate = new Date(equip.nextMaintenanceDate);
+            const diffTime = nextDate.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays <= 30) { // Show items due within 30 days
+                upcoming.push({ equipment: deepCopy(equip), daysUntilDue: diffDays });
+            }
+        }
+    });
+    
+    return upcoming.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
+};
+
 export const equipmentService = {
     getEquipmentItems,
     addEquipmentItem,
@@ -255,4 +295,6 @@ export const equipmentService = {
     archiveEquipmentItem,
     deleteEquipmentItem,
     performMaintenance,
+    getAllMaintenanceHistory,
+    getUpcomingMaintenance,
 };
