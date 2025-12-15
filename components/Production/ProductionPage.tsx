@@ -250,7 +250,7 @@ const ProductionPage: React.FC = () => {
       </div>
       
       <div className="border-b border-brand-border">
-        <nav className="-mb-px flex space-x-2" aria-label="Tabs">
+        <nav className="-mb-px flex space-x-2 overflow-x-auto" aria-label="Tabs">
           <button onClick={() => setActiveTab('orders')} className={tabButtonStyle('orders')}>
             <ProductionIcon className="h-5 w-5 mr-2"/> Задания
           </button>
@@ -266,7 +266,7 @@ const ProductionPage: React.FC = () => {
       <Card className={activeTab === 'schedule' ? '!p-0 overflow-hidden border-0 bg-transparent shadow-none' : ''}>
         {activeTab === 'schedule' && (
              <div className="h-[600px]">
-                 <ProductionSchedule orders={productionOrders} />
+                 <ProductionSchedule orders={productionOrders} onOrderUpdate={fetchPageData} />
              </div>
         )}
         

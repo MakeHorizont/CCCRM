@@ -6,7 +6,7 @@ import Button from '../UI/Button';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import { TechnologyCard, WarehouseItem } from '../../types';
 import { apiService } from '../../services/apiService';
-import { BeakerIcon, PlusCircleIcon, PencilSquareIcon, TableCellsIcon, ViewArchiveIcon } from '../UI/Icons';
+import { BeakerIcon, PlusCircleIcon, PencilSquareIcon, TableCellsIcon, ViewArchiveIcon, ClockIcon, ListBulletIcon } from '../UI/Icons';
 import { useView } from '../../hooks/useView';
 import { ROUTE_PATHS } from '../../constants';
 
@@ -16,30 +16,40 @@ const MobileTechCard: React.FC<{
   item: WarehouseItem;
   techCard?: TechnologyCard;
   onEdit: (item: WarehouseItem) => void;
-}> = ({ item, techCard, onEdit }) => (
-  <Card className="mb-3" onClick={() => onEdit(item)}>
-    <h3 className="font-semibold text-brand-text-primary">{item.name}</h3>
-    <div className="flex justify-between items-center mt-2">
-      {techCard ? (
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${techCard.isArchived ? 'bg-zinc-500/20 text-zinc-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-          {techCard.isArchived ? 'В архиве' : `Создана (Версия ${techCard.version || 1})`}
-        </span>
-      ) : (
-        <span className="px-2 py-1 text-xs font-medium rounded-full bg-zinc-500/20 text-zinc-400">
-          Отсутствует
-        </span>
-      )}
-      <Button
-        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-        variant="secondary"
-        size="sm"
-        leftIcon={techCard ? <PencilSquareIcon className="h-4 w-4" /> : <PlusCircleIcon className="h-4 w-4" />}
-      >
-        {techCard ? 'Открыть' : 'Создать'}
-      </Button>
-    </div>
-  </Card>
-);
+}> = ({ item, techCard, onEdit }) => {
+    const totalDuration = techCard?.steps.reduce((acc, step) => acc + (step.durationMinutes || 0), 0) || 0;
+    
+    return (
+      <Card className="mb-3" onClick={() => onEdit(item)}>
+        <h3 className="font-semibold text-brand-text-primary">{item.name}</h3>
+        <div className="flex justify-between items-center mt-2">
+          {techCard ? (
+            <div className="flex flex-col gap-1">
+                 <span className={`px-2 py-1 text-xs font-medium rounded-full w-fit ${techCard.isArchived ? 'bg-zinc-500/20 text-zinc-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                  {techCard.isArchived ? 'В архиве' : `Версия ${techCard.version || 1}`}
+                </span>
+                <div className="flex items-center text-xs text-brand-text-muted gap-2">
+                    <span className="flex items-center"><ClockIcon className="h-3 w-3 mr-1"/>{totalDuration} мин</span>
+                    <span className="flex items-center"><ListBulletIcon className="h-3 w-3 mr-1"/>{techCard.steps.length} шагов</span>
+                </div>
+            </div>
+          ) : (
+            <span className="px-2 py-1 text-xs font-medium rounded-full bg-zinc-500/20 text-zinc-400">
+              Отсутствует
+            </span>
+          )}
+          <Button
+            onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+            variant="secondary"
+            size="sm"
+            leftIcon={techCard ? <PencilSquareIcon className="h-4 w-4" /> : <PlusCircleIcon className="h-4 w-4" />}
+          >
+            {techCard ? 'Открыть' : 'Создать'}
+          </Button>
+        </div>
+      </Card>
+    );
+};
 
 
 const TechnologiesPage: React.FC = () => {
@@ -56,18 +66,20 @@ const TechnologiesPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [itemsData, cardsData] = (await Promise.all([
+      const results = await Promise.all([
         apiService.getWarehouseItems({ viewMode: 'active' }), 
         apiService.getTechnologyCards({ viewMode })
-      ])) as [WarehouseItem[], TechnologyCard[]];
+      ]);
+      const itemsData = results[0] as WarehouseItem[];
+      const cardsData = results[1] as TechnologyCard[];
       
       const producible = itemsData.filter(item => item.billOfMaterials && item.billOfMaterials.length > 0);
       setProducibleItems(producible);
       
-      const cardsMap = (cardsData as TechnologyCard[]).reduce((acc: Record<string, TechnologyCard>, card: TechnologyCard) => {
+      const cardsMap = cardsData.reduce<Record<string, TechnologyCard>>((acc, card) => {
         acc[card.warehouseItemId] = card;
         return acc;
-      }, {} as Record<string, TechnologyCard>);
+      }, {});
       setTechCards(cardsMap);
 
     } catch (err) {
@@ -101,7 +113,7 @@ const TechnologiesPage: React.FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold text-brand-text-primary flex items-center">
           <BeakerIcon className="h-8 w-8 mr-3 text-brand-primary" />
-          Технологические Карты (Рецептуры)
+          Технологические Карты
         </h1>
          <div className="flex space-x-3">
              <Button onClick={() => setViewMode(viewMode === 'active' ? 'archived' : 'active')} variant="secondary" leftIcon={<ViewArchiveIcon className="h-5 w-5"/>}>
@@ -134,6 +146,8 @@ const TechnologiesPage: React.FC = () => {
                     <tr>
                       <th scope="col" className="px-6 py-3">Продукт</th>
                       <th scope="col" className="px-6 py-3">Статус Тех. Карты</th>
+                      <th scope="col" className="px-6 py-3 text-right">Время цикла</th>
+                      <th scope="col" className="px-6 py-3 text-right">Шагов</th>
                       <th scope="col" className="px-6 py-3 text-center">Действия</th>
                     </tr>
                   </thead>
@@ -141,19 +155,27 @@ const TechnologiesPage: React.FC = () => {
                     {visibleProducibleItems.map(item => {
                       const card = techCards[item.id];
                       const hasCard = !!card;
+                      const totalDuration = card?.steps.reduce((acc, step) => acc + (step.durationMinutes || 0), 0) || 0;
+
                       return (
                         <tr key={item.id} className="hover:bg-brand-secondary cursor-pointer" onClick={() => handleNavigateToEditor(item)}>
                           <td className="px-6 py-4 font-medium text-brand-text-primary">{item.name}</td>
                           <td className="px-6 py-3">
                             {hasCard ? (
                               <span className={`px-2 py-1 text-xs font-medium rounded-full ${card.isArchived ? 'bg-zinc-500/20 text-zinc-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                {card.isArchived ? 'В архиве' : `Создана (Версия ${card.version || 1})`}
+                                {card.isArchived ? 'В архиве' : `Создана (v${card.version || 1})`}
                               </span>
                             ) : (
                               <span className="px-2 py-1 text-xs font-medium rounded-full bg-zinc-500/20 text-zinc-400">
                                 Отсутствует
                               </span>
                             )}
+                          </td>
+                           <td className="px-6 py-3 text-right">
+                              {hasCard ? `${totalDuration} мин` : '-'}
+                          </td>
+                           <td className="px-6 py-3 text-right">
+                              {hasCard ? card.steps.length : '-'}
                           </td>
                           <td className="px-6 py-4 text-center">
                             <Button

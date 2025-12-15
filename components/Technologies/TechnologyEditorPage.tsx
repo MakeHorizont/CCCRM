@@ -7,7 +7,7 @@ import LoadingSpinner from '../UI/LoadingSpinner';
 import ConfirmationModal from '../UI/ConfirmationModal';
 import { TechnologyCard, WarehouseItem, TechnologyStep, TechStepType, HouseholdItem, EquipmentItem } from '../../types';
 import { apiService } from '../../services/apiService';
-import { ArrowLeftIcon, PencilSquareIcon, PlusCircleIcon, TrashIcon, Bars2Icon, BeakerIcon, FireIcon, BoltIcon, CogIcon, ExclamationTriangleIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, SaveIcon } from '../UI/Icons';
+import { ArrowLeftIcon, PencilSquareIcon, PlusCircleIcon, TrashIcon, Bars2Icon, BeakerIcon, FireIcon, BoltIcon, CogIcon, ExclamationTriangleIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, SaveIcon, ChartPieIcon, ListBulletIcon, ClockIcon } from '../UI/Icons';
 import { ROUTE_PATHS } from '../../constants';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent, DragOverlay, UniqueIdentifier } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -15,17 +15,18 @@ import { CSS } from '@dnd-kit/utilities';
 import Input from '../UI/Input';
 
 type EditorMode = 'view' | 'edit';
-
+type Tab = 'structure' | 'visual' | 'history';
 
 const SortableStepItem: React.FC<{
     step: TechnologyStep; 
+    index: number;
     onUpdate: (stepId: string, updates: Partial<TechnologyStep>) => void;
     onRemove: (stepId: string) => void;
     availableIngredients: HouseholdItem[];
     availableEquipment: EquipmentItem[];
     isOverlay?: boolean;
     disabled?: boolean;
-}> = ({ step, onUpdate, onRemove, availableIngredients, availableEquipment, isOverlay, disabled }) => {
+}> = ({ step, index, onUpdate, onRemove, availableIngredients, availableEquipment, isOverlay, disabled }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.id, data: { item: step }, disabled });
 
   const style = {
@@ -36,57 +37,77 @@ const SortableStepItem: React.FC<{
     cursor: isOverlay ? 'grabbing' : (disabled ? 'default' : 'grab'),
   };
 
-  const StepIcon = {
-    ingredient: <BeakerIcon className="h-5 w-5 text-sky-400"/>,
-    action: <BoltIcon className="h-5 w-5 text-yellow-400"/>,
-    process: <FireIcon className="h-5 w-5 text-orange-400"/>,
-    safety: <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
-  }[step.type];
+  const { Icon, colorClass, borderColor } = useMemo(() => {
+     switch(step.type) {
+         case 'ingredient': return { Icon: BeakerIcon, colorClass: 'text-sky-500', borderColor: 'border-l-sky-500' };
+         case 'action': return { Icon: BoltIcon, colorClass: 'text-yellow-500', borderColor: 'border-l-yellow-500' };
+         case 'process': return { Icon: FireIcon, colorClass: 'text-orange-500', borderColor: 'border-l-orange-500' };
+         case 'safety': return { Icon: ExclamationTriangleIcon, colorClass: 'text-red-500', borderColor: 'border-l-red-500' };
+         default: return { Icon: CogIcon, colorClass: 'text-gray-500', borderColor: 'border-l-gray-300' };
+     }
+  }, [step.type]);
 
   return (
-    <div ref={setNodeRef} style={style} className="p-3 bg-brand-surface rounded-md border border-brand-border mb-2">
+    <div ref={setNodeRef} style={style} className={`p-3 bg-brand-surface rounded-md border border-brand-border mb-2 border-l-4 ${borderColor}`}>
       <div className="flex items-start space-x-2">
-        <span {...attributes} {...listeners} className={`pt-1 text-brand-text-muted hover:text-brand-text-primary touch-none ${disabled ? 'cursor-default' : 'cursor-grab'}`}>
-          <Bars2Icon className="h-5 w-5"/>
-        </span>
+        <div className="flex flex-col items-center gap-1">
+             <span {...attributes} {...listeners} className={`pt-1 text-brand-text-muted hover:text-brand-text-primary touch-none ${disabled ? 'cursor-default' : 'cursor-grab'}`}>
+                <Bars2Icon className="h-5 w-5"/>
+            </span>
+            <span className="text-[10px] font-mono text-brand-text-muted">{index + 1}</span>
+        </div>
         <div className="flex-grow space-y-2">
           <div className="flex items-center space-x-2">
-            {StepIcon}
+            <Icon className={`h-5 w-5 ${colorClass} flex-shrink-0`}/>
             <Input id={`step-name-${step.id}`} type="text" value={step.name} onChange={e => onUpdate(step.id, { name: e.target.value })} className="flex-grow !py-1 text-sm font-medium" disabled={disabled}/>
             {!disabled && <Button type="button" variant="danger" size="sm" onClick={() => onRemove(step.id)} className="p-1 leading-none"><TrashIcon className="h-4 w-4"/></Button>}
           </div>
           <textarea value={step.description || ''} onChange={e => onUpdate(step.id, { description: e.target.value })} placeholder="Описание шага..." rows={1} className="w-full text-xs p-1.5 bg-brand-card border border-brand-border rounded-md" disabled={disabled}/>
-          {step.type === 'ingredient' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              <select value={step.componentId || ''} onChange={e => {
-                  const selected = availableIngredients.find(i => i.id === e.target.value);
-                  onUpdate(step.id, { componentId: e.target.value, componentName: selected?.name, unit: selected?.unit });
-              }} className="w-full bg-brand-card border border-brand-border rounded-md p-1.5" disabled={disabled}>
-                  <option value="">Выберите сырье...</option>
-                  {availableIngredients.map(ing => <option key={ing.id} value={ing.id}>{ing.name}</option>)}
-              </select>
-              <div className="flex items-center gap-1">
-                <Input id={`step-qty-${step.id}`} type="number" step="0.001" value={String(step.plannedQuantity || '')} onChange={e => onUpdate(step.id, { plannedQuantity: parseFloat(e.target.value) || undefined })} placeholder="Кол-во" className="!py-1.5 w-full" disabled={disabled}/>
-                <span className="text-brand-text-muted">{step.unit || 'ед.'}</span>
-              </div>
-            </div>
-          )}
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs items-end">
+               {step.type === 'ingredient' && (
+                <>
+                    <div className="w-full">
+                         <label className="block text-[10px] text-brand-text-muted mb-0.5">Компонент</label>
+                        <select value={step.componentId || ''} onChange={e => {
+                            const selected = availableIngredients.find(i => i.id === e.target.value);
+                            onUpdate(step.id, { componentId: e.target.value, componentName: selected?.name, unit: selected?.unit });
+                        }} className="w-full bg-brand-card border border-brand-border rounded-md p-1.5" disabled={disabled}>
+                            <option value="">Выберите сырье...</option>
+                            {availableIngredients.map(ing => <option key={ing.id} value={ing.id}>{ing.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="w-full">
+                         <label className="block text-[10px] text-brand-text-muted mb-0.5">Количество ({step.unit || 'ед'})</label>
+                         <Input id={`step-qty-${step.id}`} type="number" step="0.001" value={String(step.plannedQuantity || '')} onChange={e => onUpdate(step.id, { plannedQuantity: parseFloat(e.target.value) || undefined })} placeholder="0.00" className="!py-1.5 w-full" disabled={disabled}/>
+                    </div>
+                </>
+               )}
+               
+               {(step.type === 'action' || step.type === 'process') && (
+                 <>
+                    <div className="w-full">
+                        <label className="block text-[10px] text-brand-text-muted mb-0.5">Длительность (мин)</label>
+                         <Input id={`step-duration-${step.id}`} type="number" value={String(step.durationMinutes || '')} onChange={e => onUpdate(step.id, { durationMinutes: parseInt(e.target.value) || undefined })} placeholder="0" className="!py-1.5" disabled={disabled}/>
+                    </div>
+                     <div className="w-full">
+                         <label className="block text-[10px] text-brand-text-muted mb-0.5">Нагрузка оборудования (%)</label>
+                         <Input id={`step-power-${step.id}`} type="number" value={String(step.powerUsagePercentage || '')} onChange={e => onUpdate(step.id, { powerUsagePercentage: parseInt(e.target.value) || undefined })} placeholder="0-100" min="0" max="100" className="!py-1.5" disabled={disabled}/>
+                    </div>
+                 </>
+               )}
+          </div>
+
           {(step.type === 'action' || step.type === 'process') && (
-               <div className="text-xs space-y-2">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                     <Input id={`step-duration-${step.id}`} type="number" value={String(step.durationMinutes || '')} onChange={e => onUpdate(step.id, { durationMinutes: parseInt(e.target.value) || undefined })} label="Длительность (мин)" smallLabel placeholder="Напр: 30" className="!py-1.5" disabled={disabled}/>
-                     <Input id={`step-power-${step.id}`} type="number" value={String(step.powerUsagePercentage || '')} onChange={e => onUpdate(step.id, { powerUsagePercentage: parseInt(e.target.value) || undefined })} label="Нагрузка (%)" smallLabel placeholder="0-100" min="0" max="100" className="!py-1.5" disabled={disabled}/>
-                  </div>
-                  <div>
-                    <label htmlFor={`equip-select-${step.id}`} className="block text-xs font-medium text-brand-text-muted mb-1">Требуемое оборудование (опционально)</label>
-                    <select id={`equip-select-${step.id}`} value={step.requiredEquipmentId || ''} onChange={e => {
-                        const selected = availableEquipment.find(eq => eq.id === e.target.value);
-                        onUpdate(step.id, { requiredEquipmentId: e.target.value || undefined, requiredEquipmentName: selected?.name || undefined });
-                    }} className="w-full bg-brand-card border border-brand-border rounded-md p-1.5" disabled={disabled}>
-                        <option value="">Не выбрано</option>
-                        {availableEquipment.map(eq => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
-                    </select>
-                  </div>
+              <div>
+                <label htmlFor={`equip-select-${step.id}`} className="block text-[10px] font-medium text-brand-text-muted mb-0.5">Требуемое оборудование (опционально)</label>
+                <select id={`equip-select-${step.id}`} value={step.requiredEquipmentId || ''} onChange={e => {
+                    const selected = availableEquipment.find(eq => eq.id === e.target.value);
+                    onUpdate(step.id, { requiredEquipmentId: e.target.value || undefined, requiredEquipmentName: selected?.name || undefined });
+                }} className="w-full bg-brand-card border border-brand-border rounded-md p-1.5 text-xs" disabled={disabled}>
+                    <option value="">Не выбрано</option>
+                    {availableEquipment.map(eq => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
+                </select>
               </div>
           )}
         </div>
@@ -94,6 +115,47 @@ const SortableStepItem: React.FC<{
     </div>
   );
 };
+
+const VisualTechMap: React.FC<{ steps: TechnologyStep[] }> = ({ steps }) => {
+    return (
+        <div className="flex flex-col items-center py-6 space-y-4">
+             {steps.length === 0 && <p className="text-brand-text-muted">Нет шагов для отображения.</p>}
+             {steps.map((step, index) => {
+                  const colorClass = 
+                    step.type === 'ingredient' ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20' :
+                    step.type === 'process' ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' :
+                    step.type === 'action' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
+                    'border-red-500 bg-red-50 dark:bg-red-900/20';
+
+                  return (
+                      <React.Fragment key={step.id}>
+                          <div className={`relative p-3 w-64 rounded-lg border-2 text-center shadow-sm ${colorClass}`}>
+                               <div className="text-xs font-bold uppercase mb-1 opacity-70 tracking-wider">{step.type}</div>
+                               <div className="font-medium text-brand-text-primary">{step.name}</div>
+                               {(step.durationMinutes || 0) > 0 && <div className="text-xs text-brand-text-secondary mt-1">{step.durationMinutes} мин</div>}
+                          </div>
+                          {index < steps.length - 1 && (
+                              <div className="h-6 w-0.5 bg-brand-border relative">
+                                  <div className="absolute -bottom-1 -left-1 w-2.5 h-2.5 border-b-2 border-r-2 border-brand-border transform rotate-45"></div>
+                              </div>
+                          )}
+                      </React.Fragment>
+                  )
+             })}
+             {steps.length > 0 && (
+                 <>
+                    <div className="h-6 w-0.5 bg-brand-border relative">
+                         <div className="absolute -bottom-1 -left-1 w-2.5 h-2.5 border-b-2 border-r-2 border-brand-border transform rotate-45"></div>
+                    </div>
+                    <div className="p-3 w-64 rounded-lg border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-center shadow-sm">
+                        <div className="text-xs font-bold uppercase mb-1 opacity-70 tracking-wider text-emerald-700 dark:text-emerald-400">РЕЗУЛЬТАТ</div>
+                        <div className="font-medium text-brand-text-primary">Готовая Продукция</div>
+                    </div>
+                 </>
+             )}
+        </div>
+    )
+}
 
 
 const TechnologyEditorPage: React.FC = () => {
@@ -104,6 +166,7 @@ const TechnologyEditorPage: React.FC = () => {
     const targetItemId = isNew ? new URLSearchParams(location.search).get('warehouseItemId') : warehouseItemId;
 
     const [mode, setMode] = useState<EditorMode>(isNew ? 'edit' : 'view');
+    const [activeTab, setActiveTab] = useState<Tab>('structure');
     const [techCard, setTechCard] = useState<Partial<TechnologyCard>>({});
     const [targetItem, setTargetItem] = useState<WarehouseItem | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -217,9 +280,18 @@ const TechnologyEditorPage: React.FC = () => {
     if (error) return <p className="text-red-500 text-center p-4">{error}</p>;
     if (!targetItem || !techCard) return <p className="text-center p-4">Данные не найдены.</p>;
 
-    const pageTitle = isNew ? `Новая тех. карта для ${targetItem.name}` : `Тех. карта: ${targetItem.name}`;
+    const pageTitle = isNew ? `Новая тех. карта` : `Тех. карта`;
     const draggedStep = activeDragId ? techCard.steps?.find(s => s.id === activeDragId) : null;
     const isFormDisabled = mode === 'view' || isSaving;
+    const totalDuration = techCard.steps?.reduce((acc, s) => acc + (s.durationMinutes || 0), 0) || 0;
+    const stepCount = techCard.steps?.length || 0;
+
+    const tabButtonStyle = (tabName: Tab) =>
+    `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ` +
+    (activeTab === tabName
+      ? 'border-brand-primary text-brand-primary bg-brand-surface'
+      : 'border-transparent text-brand-text-secondary hover:text-brand-text-primary hover:border-brand-border');
+
 
     return (
          <div className="space-y-4">
@@ -228,8 +300,15 @@ const TechnologyEditorPage: React.FC = () => {
             </Button>
             
              <form onSubmit={(e) => { e.preventDefault(); setIsSaveConfirmOpen(true); }}>
-                <div className="flex justify-between items-center mb-4">
-                    <h1 className="text-2xl font-semibold">{pageTitle} (Версия: {techCard.version || 1})</h1>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                    <div>
+                        <h1 className="text-2xl font-semibold text-brand-text-primary">{pageTitle}: {targetItem.name}</h1>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-brand-text-secondary">
+                             <span>Версия: <strong>{techCard.version || 1}</strong></span>
+                             <span className="flex items-center"><ClockIcon className="h-4 w-4 mr-1"/> {totalDuration} мин</span>
+                             <span className="flex items-center"><ListBulletIcon className="h-4 w-4 mr-1"/> {stepCount} этапов</span>
+                        </div>
+                    </div>
                      <div className="flex space-x-2">
                         {mode === 'view' && !techCard.isArchived && (
                             <Button type="button" onClick={() => setMode('edit')} variant="primary" leftIcon={<PencilSquareIcon className="h-4 w-4"/>}>Редактировать</Button>
@@ -239,42 +318,68 @@ const TechnologyEditorPage: React.FC = () => {
                         )}
                     </div>
                 </div>
+
+                <div className="border-b border-brand-border mb-4">
+                    <nav className="-mb-px flex space-x-2" aria-label="Tabs">
+                        <button type="button" onClick={() => setActiveTab('structure')} className={tabButtonStyle('structure')}>Конструктор (Структура)</button>
+                        <button type="button" onClick={() => setActiveTab('visual')} className={tabButtonStyle('visual')}>Схема (Flow)</button>
+                        <button type="button" onClick={() => setActiveTab('history')} className={tabButtonStyle('history')}>История Версий</button>
+                    </nav>
+                </div>
+
                 <Card>
-                    <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar-thin">
-                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveDragId(null)}>
-                            <SortableContext items={(techCard.steps || []).map(s => s.id)} strategy={verticalListSortingStrategy}>
-                            {(techCard.steps || []).map(step => (
-                                <SortableStepItem 
-                                    key={step.id} 
-                                    step={step}
-                                    onUpdate={handleUpdateStep}
-                                    onRemove={handleRemoveStep}
-                                    availableIngredients={availableIngredients}
-                                    availableEquipment={availableEquipment}
-                                    disabled={techCard.isArchived || isFormDisabled}
-                                />
-                            ))}
-                            </SortableContext>
-                            <DragOverlay>
-                                {draggedStep ? (
-                                <SortableStepItem step={draggedStep} onUpdate={()=>{}} onRemove={()=>{}} availableIngredients={availableIngredients} availableEquipment={availableEquipment} isOverlay disabled={techCard.isArchived || isFormDisabled}/>
-                                ) : null}
-                            </DragOverlay>
-                        </DndContext>
-                    </div>
-                     <div className="flex-shrink-0 pt-4 border-t border-brand-border flex items-center justify-between">
-                        <div className="flex space-x-2">
-                            {!techCard.isArchived && !isFormDisabled && (
-                                <>
-                                    <Button size="sm" onClick={() => handleAddStep('ingredient')} leftIcon={<BeakerIcon className="h-4 w-4"/>}>Сырье</Button>
-                                    <Button size="sm" onClick={() => handleAddStep('action')} leftIcon={<BoltIcon className="h-4 w-4"/>}>Действие</Button>
-                                    <Button size="sm" onClick={() => handleAddStep('process')} leftIcon={<FireIcon className="h-4 w-4"/>}>Процесс</Button>
-                                    <Button size="sm" onClick={() => handleAddStep('safety')} leftIcon={<ExclamationTriangleIcon className="h-4 w-4"/>}>ТБ</Button>
-                                </>
-                            )}
-                        </div>
+                    <div className="min-h-[500px] flex flex-col">
+                        {activeTab === 'structure' && (
+                            <>
+                            <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar-thin">
+                                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveDragId(null)}>
+                                    <SortableContext items={(techCard.steps || []).map(s => s.id)} strategy={verticalListSortingStrategy}>
+                                    {(techCard.steps || []).map((step, idx) => (
+                                        <SortableStepItem 
+                                            key={step.id} 
+                                            step={step}
+                                            index={idx}
+                                            onUpdate={handleUpdateStep}
+                                            onRemove={handleRemoveStep}
+                                            availableIngredients={availableIngredients}
+                                            availableEquipment={availableEquipment}
+                                            disabled={techCard.isArchived || isFormDisabled}
+                                        />
+                                    ))}
+                                    </SortableContext>
+                                    <DragOverlay>
+                                        {draggedStep ? (
+                                        <SortableStepItem step={draggedStep} index={0} onUpdate={()=>{}} onRemove={()=>{}} availableIngredients={availableIngredients} availableEquipment={availableEquipment} isOverlay disabled={techCard.isArchived || isFormDisabled}/>
+                                        ) : null}
+                                    </DragOverlay>
+                                </DndContext>
+                            </div>
+                            <div className="flex-shrink-0 pt-4 border-t border-brand-border flex items-center justify-between">
+                                <div className="flex space-x-2">
+                                    {!techCard.isArchived && !isFormDisabled && (
+                                        <>
+                                            <Button size="sm" onClick={() => handleAddStep('ingredient')} leftIcon={<BeakerIcon className="h-4 w-4"/>} title="Добавить Ингредиент">Сырье</Button>
+                                            <Button size="sm" onClick={() => handleAddStep('action')} leftIcon={<BoltIcon className="h-4 w-4"/>} title="Добавить Действие">Действие</Button>
+                                            <Button size="sm" onClick={() => handleAddStep('process')} leftIcon={<FireIcon className="h-4 w-4"/>} title="Добавить Процесс (Варка/Жарка)">Процесс</Button>
+                                            <Button size="sm" onClick={() => handleAddStep('safety')} leftIcon={<ExclamationTriangleIcon className="h-4 w-4"/>} title="Добавить Технику Безопасности">ТБ</Button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                            </>
+                        )}
+                        {activeTab === 'visual' && (
+                            <VisualTechMap steps={techCard.steps || []} />
+                        )}
+                        {activeTab === 'history' && (
+                             <div className="text-center p-8 text-brand-text-muted">
+                                <p>История изменений версий будет доступна в следующем обновлении.</p>
+                                <p className="text-xs mt-2">Здесь вы сможете откатить изменения или посмотреть, кто и когда менял технологию.</p>
+                            </div>
+                        )}
                     </div>
                 </Card>
+
                  <div className="flex space-x-2 mt-4">
                     {techCard.id && mode === 'view' && !techCard.isArchived && (
                         <Button type="button" variant="secondary" onClick={() => setIsArchiveConfirmOpen(true)} leftIcon={<ArchiveBoxIcon className="h-5 w-5"/>}>Архивировать</Button>

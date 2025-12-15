@@ -63,7 +63,7 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
             const newCheck = await apiService.createInventoryCheck(blindMode);
             setCurrentCheck(newCheck);
             setStep('count');
-        } catch (e: any) {
+        } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
             alert(message);
         } finally {
@@ -77,8 +77,6 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
     
     const handleSaveProgress = async () => {
         if (!currentCheck) return;
-        // Ideally save individually or batch. For mock, we update locally or simulate batch update.
-        // We'll loop update.
         setIsProcessing(true);
         try {
             for(const [itemId, qty] of Object.entries(editedQuantities)) {
@@ -91,9 +89,10 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
             const active = await apiService.getActiveInventoryCheck();
             setCurrentCheck(active);
             alert("Прогресс сохранен.");
-        } catch(e: any) {
+        } catch(e: unknown) {
             console.error(e);
-            const message = e instanceof Error ? e.message : String(e);
+            const err = e as Error;
+            const message = err.message || String(e);
             alert("Ошибка: " + message);
         } finally {
             setIsProcessing(false);
@@ -114,8 +113,9 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
             const active = await apiService.getActiveInventoryCheck();
             setCurrentCheck(active);
             setStep('review');
-         } catch (e: any) {
-             const message = e instanceof Error ? e.message : String(e);
+         } catch (e: unknown) {
+             const err = e as Error;
+             const message = err.message || String(e);
              alert("Ошибка сохранения: " + message);
          } finally {
              setIsProcessing(false);
@@ -129,7 +129,7 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
             await apiService.completeInventoryCheck(currentCheck.id, completionNotes);
             onComplete();
             onClose();
-        } catch (e: any) {
+        } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
             alert(message);
         } finally {
@@ -144,7 +144,7 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
          try {
              await apiService.cancelInventoryCheck(currentCheck.id);
              onClose();
-         } catch (e: any) {
+         } catch (e: unknown) {
              const message = e instanceof Error ? e.message : String(e);
              alert(message);
          } finally {

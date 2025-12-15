@@ -1,3 +1,4 @@
+
 // types/warehouse.ts
 import { FileAttachment } from './common';
 

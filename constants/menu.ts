@@ -9,7 +9,7 @@ import {
     DocumentIcon, BeakerIcon, PlayCircleIcon, CalculatorIcon, BanknotesIcon, ArrowsUpDownIcon,
     ChatBubbleOvalLeftEllipsisIcon, BellIcon, ArrowTrendingUpIcon, CircleStackIcon, BriefcaseIcon, SparklesIcon,
     AwardIcon, ListBulletIcon, DocumentChartBarIcon as ChartBarIcon, HeartIcon, FlagIcon, ArrowPathIcon, EyeIcon, ScaleIcon,
-    ChartPieIcon, ShieldCheckIcon, WrenchIcon // Added WrenchIcon
+    ChartPieIcon, ShieldCheckIcon, WrenchIcon, CalendarDaysIcon // Imported CalendarDaysIcon
 } from '../components/UI/Icons';
 import { User } from '../types';
 import { ROUTE_PATHS } from './paths';
@@ -36,6 +36,7 @@ export interface SubMenuItem {
 export const MENU_ITEMS: MenuItem[] = [
   { name: 'Панель управления', path: ROUTE_PATHS.DASHBOARD, icon: HomeIcon, iconName: 'HomeIcon' },
   { name: 'Аналитика', path: ROUTE_PATHS.ANALYTICS, icon: ChartPieIcon, iconName: 'ChartPieIcon' },
+  { name: 'Единый Календарь', path: ROUTE_PATHS.CALENDAR, icon: CalendarDaysIcon, iconName: 'CalendarDaysIcon' }, // Added Calendar
   
   { name: 'Производство', isHeader: true, icon: ProductionIcon, iconName: 'ProductionIcon' },
   { name: 'Заказы', path: ROUTE_PATHS.ORDERS, icon: ShoppingCartIcon, iconName: 'ShoppingCartIcon' },
@@ -149,9 +150,9 @@ export const MENU_ITEMS_FOR_MOBILE_NAV: MobileNavItemConfig[] = MENU_ITEMS.reduc
 
 const ensureCoreItems = (config: MobileNavItemConfig[]): MobileNavItemConfig[] => {
     const corePaths = [
-        ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.ANALYTICS, ROUTE_PATHS.ORDERS, ROUTE_PATHS.DOCUMENTS, ROUTE_PATHS.PRODUCTION,
+        ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.ANALYTICS, ROUTE_PATHS.CALENDAR, ROUTE_PATHS.ORDERS, ROUTE_PATHS.DOCUMENTS, ROUTE_PATHS.PRODUCTION,
         ROUTE_PATHS.WAREHOUSE, ROUTE_PATHS.KANBAN_HOME, ROUTE_PATHS.KNOWLEDGE_BASE, ROUTE_PATHS.COUNCIL, ROUTE_PATHS.QUALITY_CONTROL,
-        ROUTE_PATHS.EQUIPMENT, ROUTE_PATHS.MAINTENANCE // Added Maintenance
+        ROUTE_PATHS.EQUIPMENT, ROUTE_PATHS.MAINTENANCE
     ];
     let result = [...config];
     corePaths.forEach(corePath => {

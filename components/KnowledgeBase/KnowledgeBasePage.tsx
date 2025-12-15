@@ -84,6 +84,14 @@ const KnowledgeBasePage: React.FC = () => {
   const [activeDragId, setActiveDragId] = useState<UniqueIdentifier | null>(null);
   const [isDraggingOverZone, setIsDraggingOverZone] = useState<boolean>(false);
 
+  // Shared options for marked to avoid warnings
+  const markedOptions = {
+    gfm: true,
+    breaks: true,
+    mangle: false,
+    headerIds: false
+  };
+
 
   const fetchItems = useCallback(async (parentId: string | null, mode: KBViewMode) => {
     if (!user) return;
@@ -142,7 +150,7 @@ const KnowledgeBasePage: React.FC = () => {
 
           if (fileData?.fileType === 'markdown') {
               if (window.marked && window.DOMPurify) {
-                  const rawHtml = window.marked.parse(fileData.content || '', { gfm: true, breaks: true });
+                  const rawHtml = window.marked.parse(fileData.content || '', markedOptions);
                   const sanitizedHtml = window.DOMPurify.sanitize(rawHtml);
                   setViewingFileContentHtml(sanitizedHtml);
               } else {
@@ -303,7 +311,7 @@ const KnowledgeBasePage: React.FC = () => {
         setIsEditingMarkdown(false);
         // Re-render content
         if (window.marked && window.DOMPurify) {
-            const rawHtml = window.marked.parse(editingFileMarkdown, { gfm: true, breaks: true });
+            const rawHtml = window.marked.parse(editingFileMarkdown, markedOptions);
             const sanitizedHtml = window.DOMPurify.sanitize(rawHtml);
             setViewingFileContentHtml(sanitizedHtml);
         } else {

@@ -19,7 +19,14 @@ interface MarkdownDisplayProps {
 const MarkdownDisplay: React.FC<MarkdownDisplayProps> = ({ markdown, className = '' }) => {
   const sanitizedHtml = useMemo(() => {
     if (typeof window !== 'undefined' && window.marked && window.DOMPurify) {
-      const rawHtml = window.marked.parse(markdown || '', { gfm: true, breaks: true });
+      // Configuration to suppress deprecation warnings in marked v5.0.0+
+      const markedOptions = {
+        gfm: true,
+        breaks: true,
+        mangle: false,
+        headerIds: false
+      };
+      const rawHtml = window.marked.parse(markdown || '', markedOptions);
       return window.DOMPurify.sanitize(rawHtml);
     }
     // Return a safe fallback if libraries aren't loaded

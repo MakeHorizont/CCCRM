@@ -5,6 +5,7 @@ export const ROUTE_PATHS = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
   ANALYTICS: '/analytics',
+  CALENDAR: '/calendar', // New path
   PROFILE: '/profile',
   CONTACTS: '/contacts',
   WAREHOUSE: '/warehouse',
@@ -35,7 +36,7 @@ export const ROUTE_PATHS = {
   FINANCIAL_ACCOUNTING: '/financial-accounting',
   TRANSACTIONS: '/transactions',
   EQUIPMENT: '/equipment',
-  MAINTENANCE: '/equipment/maintenance', // New path
+  MAINTENANCE: '/equipment/maintenance',
   DOCUMENTS: '/documents',
   PRINT_DOCUMENT: '/documents/print',
   NOTIFICATIONS: '/notifications',

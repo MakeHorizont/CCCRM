@@ -321,6 +321,36 @@ const updateProductionOrder = async (orderData: ProductionOrder): Promise<Produc
     return deepCopy(updatedOrder);
 };
 
+const rescheduleProductionOrder = async (id: string, newStartDate: string, newEndDate: string): Promise<ProductionOrder> => {
+    if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
+        return await apiClient.patch<ProductionOrder>(`/production/orders/${id}/reschedule`, { plannedStartDate: newStartDate, plannedEndDate: newEndDate });
+    }
+
+    await delay(300);
+    const index = mockProductionOrders.findIndex(p => p.id === id);
+    if (index === -1) throw new Error("Production Order not found");
+    
+    const original = mockProductionOrders[index];
+    const oldDates = `${original.plannedStartDate} - ${original.plannedEndDate}`;
+    
+    mockProductionOrders[index] = {
+        ...original,
+        plannedStartDate: newStartDate,
+        plannedEndDate: newEndDate,
+        updatedAt: new Date().toISOString()
+    };
+    
+    await systemService.logEvent(
+        'Перенос сроков ПЗ',
+        `Сроки задания "${original.name}" изменены. Было: ${oldDates}, Стало: ${newStartDate} - ${newEndDate}.`,
+        'production',
+        id,
+        'ProductionOrder'
+    );
+
+    return deepCopy(mockProductionOrders[index]);
+};
+
 const archiveProductionOrder = async (id: string, archive: boolean): Promise<{success:true}> => {
     if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.PRODUCTION) {
         await apiClient.post(`/production/orders/${id}/archive`, { archive });
@@ -582,6 +612,7 @@ export const productionService = {
     getProductionOrders,
     addProductionOrder,
     updateProductionOrder,
+    rescheduleProductionOrder, // Exported new method
     archiveProductionOrder,
     deleteProductionOrder,
     getTechnologyCards,

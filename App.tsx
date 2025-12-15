@@ -42,11 +42,12 @@ import KnowledgeBasePage from './components/KnowledgeBase/KnowledgeBasePage';
 import MailPage from './components/Mail/MailPage';
 import EquipmentListPage from './components/Equipment/EquipmentListPage';
 import EquipmentEditorPage from './components/Equipment/EquipmentEditorPage';
-import MaintenancePage from './components/Maintenance/MaintenancePage'; // New Import
+import MaintenancePage from './components/Maintenance/MaintenancePage'; 
 import AuditLogPage from './components/System/AuditLogPage'; 
 import CouncilPage from './components/Council/CouncilPage';
 import AnalyticsPage from './components/Analytics/AnalyticsPage'; 
 import QualityControlPage from './components/Quality/QualityControlPage'; 
+import CalendarPage from './components/Calendar/CalendarPage'; // New Import
 
 import { useAuth } from './hooks/useAuth';
 import { ROUTE_PATHS } from './constants';
@@ -131,6 +132,9 @@ const App: React.FC = () => {
                 
                 {/* Analytics Route */}
                 <Route path={ROUTE_PATHS.ANALYTICS.substring(1)} element={<AnalyticsPage />} />
+                
+                {/* Calendar Route */}
+                <Route path={ROUTE_PATHS.CALENDAR.substring(1)} element={<CalendarPage />} />
 
                 {/* Quality Control Route */}
                 <Route path={ROUTE_PATHS.QUALITY_CONTROL.substring(1)} element={<QualityControlPage />} />
