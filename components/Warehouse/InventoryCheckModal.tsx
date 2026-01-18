@@ -91,8 +91,7 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
             alert("Прогресс сохранен.");
         } catch(e: unknown) {
             console.error(e);
-            const err = e as Error;
-            const message = err.message || String(e);
+            const message = e instanceof Error ? e.message : String(e);
             alert("Ошибка: " + message);
         } finally {
             setIsProcessing(false);
@@ -114,8 +113,7 @@ const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({ isOpen, onClo
             setCurrentCheck(active);
             setStep('review');
          } catch (e: unknown) {
-             const err = e as Error;
-             const message = err.message || String(e);
+             const message = e instanceof Error ? e.message : String(e);
              alert("Ошибка сохранения: " + message);
          } finally {
              setIsProcessing(false);

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, ChangeEvent, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import Button from '../UI/Button';
@@ -10,10 +11,11 @@ import { apiService } from '../../services/apiService';
 import { useAuth } from '../../hooks/useAuth';
 import {
     PencilSquareIcon, TrashIcon, ClipboardDocumentListIcon, Cog6ToothIcon as CogIcon, ArrowsUpDownIcon,
-    ExclamationTriangleIcon, CheckCircleIcon, ChatBubbleOvalLeftEllipsisIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, PlusCircleIcon, ArrowLeftIcon, SaveIcon
+    ExclamationTriangleIcon, CheckCircleIcon, ChatBubbleOvalLeftEllipsisIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, PlusCircleIcon, ArrowLeftIcon, SaveIcon, QrCodeIcon
 } from '../UI/Icons';
 import Tooltip from '../UI/Tooltip';
 import { ROUTE_PATHS } from '../../constants';
+import QrLabelModal from '../UI/QrLabelModal';
 
 type EditorMode = 'view' | 'edit';
 type ActiveTab = 'main' | 'bom' | 'movement' | 'incidents';
@@ -32,6 +34,9 @@ const WarehouseItemEditorPage: React.FC = () => {
 
     const [activeTab, setActiveTab] = useState<ActiveTab>('main');
     
+    // Passport State
+    const [isPassportModalOpen, setIsPassportModalOpen] = useState(false);
+
     // Data for dropdowns and context
     const [availableHouseholdItems, setAvailableHouseholdItems] = useState<HouseholdItem[]>([]);
     const [selectedBomHouseholdItemId, setSelectedBomHouseholdItemId] = useState<string>('');
@@ -231,6 +236,9 @@ const WarehouseItemEditorPage: React.FC = () => {
                 <div className="flex justify-between items-center mb-4">
                     <h1 className="text-2xl font-semibold">{pageTitle}</h1>
                     <div className="flex space-x-2">
+                        {!isNew && (
+                            <Button type="button" onClick={() => setIsPassportModalOpen(true)} variant="secondary" leftIcon={<QrCodeIcon className="h-4 w-4"/>}>Паспорт</Button>
+                        )}
                          {mode === 'view' && !editingItem.isArchived && (
                             <Button type="button" onClick={() => setMode('edit')} variant="primary" leftIcon={<PencilSquareIcon className="h-4 w-4"/>}>Редактировать</Button>
                         )}
@@ -356,7 +364,33 @@ const WarehouseItemEditorPage: React.FC = () => {
                         </div>
                     )}
                 </Card>
+
+                <div className="flex space-x-2 mt-4">
+                    {editingItem.id && mode === 'view' && (
+                        editingItem.isArchived ? (
+                            <>
+                                <Button type="button" variant="secondary" onClick={() => setIsArchiveConfirmOpen(true)} isLoading={isSaving} leftIcon={<ArrowUturnLeftIcon className="h-5 w-5"/>}>Восстановить</Button>
+                                <Button type="button" variant="danger" onClick={() => setIsDeleteConfirmOpen(true)} isLoading={isSaving} leftIcon={<TrashIcon className="h-5 w-5"/>}>Удалить</Button>
+                            </>
+                        ) : (
+                             <Button type="button" variant="secondary" onClick={() => setIsArchiveConfirmOpen(true)} isLoading={isSaving} leftIcon={<ArchiveBoxIcon className="h-5 w-5"/>}>Архивировать</Button>
+                        )
+                    )}
+                 </div>
             </form>
+
+             {isPassportModalOpen && (
+                 <QrLabelModal 
+                    isOpen={isPassportModalOpen} 
+                    onClose={() => setIsPassportModalOpen(false)} 
+                    itemData={{
+                        id: editingItem.id!,
+                        name: editingItem.name!,
+                        sku: editingItem.sku
+                    }} 
+                />
+             )}
+
              {isSaveConfirmOpen && <ConfirmationModal isOpen={isSaveConfirmOpen} onClose={() => setIsSaveConfirmOpen(false)} onConfirm={handleConfirmSave} title="Подтвердить сохранение" message="Сохранить изменения?" confirmText="Сохранить" isLoading={isSaving} />}
              <ConfirmationModal 
                 isOpen={isIncidentResolveConfirmOpen}

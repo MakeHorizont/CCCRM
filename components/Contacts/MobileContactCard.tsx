@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Contact, ContactPriority, SocialMediaLinks } from '../../types';
 import Card from '../UI/Card';
@@ -9,7 +10,7 @@ import {
 import { formatPhoneNumber, SOCIAL_MEDIA_PLATFORMS } from '../../constants';
 
 const REQUISITE_FIELDS: (keyof Contact['requisites'])[] = [
-    'name', 'legalAddress', 'inn', 'ogrn', 'bankAccount', 'bankName', 'bik', 'city', 'correspondentAccount', 'okpo', 'oktmo', 'phone', 'email', 'website'
+    'name', 'legalAddress', 'inn', 'ogrn', 'bankAccount', 'bankName', 'bik', 'city', 'correspondentAccount', 'okpo', 'oktmo', 'phone', 'email', 'website', 'kpp'
 ];
 
 const REQUISITE_LABELS: Record<keyof Contact['requisites'], string> = {
@@ -26,7 +27,9 @@ const REQUISITE_LABELS: Record<keyof Contact['requisites'], string> = {
     oktmo: 'ОКТМО',
     phone: 'Телефон (юр. лица)',
     email: 'E-mail (юр. лица)',
-    website: 'Сайт'
+    website: 'Сайт',
+    // FIX: Add missing 'kpp' key to satisfy type requirement
+    kpp: 'КПП'
 };
 
 interface MobileContactCardProps {

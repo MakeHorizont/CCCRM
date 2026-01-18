@@ -1,3 +1,4 @@
+
 // types/finance.ts
 import { FileAttachment } from './common';
 
@@ -15,6 +16,9 @@ export type TransactionCategory =
   | 'Отчисления в фонды'
   | 'Прочее';
 
+// FIX: Added exported SortableTransactionKeys type
+export type SortableTransactionKeys = 'date' | 'description' | 'category' | 'amount';
+
 export interface Transaction {
   id: string;
   date: string;
@@ -27,13 +31,12 @@ export interface Transaction {
   relatedContactId?: string | null;
   relatedPurchaseRequestId?: string | null;
   relatedProductionOrderId?: string | null;
-  relatedEquipmentId?: string | null; // Added for maintenance costs
+  relatedEquipmentId?: string | null;
   createdAt: string;
   updatedAt: string;
   isArchived: boolean;
   archivedAt?: string;
 }
-export type SortableTransactionKeys = 'date' | 'description' | 'category' | 'amount';
 
 export interface MonthlyExpense {
   id: string;
@@ -55,6 +58,9 @@ export interface MonthlyExpense {
 export type EquipmentCategory = 'Подготовка сырья' | 'Термообработка' | 'Смешивание и охлаждение' | 'Упаковка' | 'Хранение' | 'Вспомогательное' | 'Освещение' | 'Другое';
 export type EquipmentUsageType = 'on_demand' | 'continuous_24_7' | 'working_hours';
 
+// FIX: Added exported SortableEquipmentKeys type
+export type SortableEquipmentKeys = 'name' | 'category' | 'status' | 'cost' | 'amortizationPercentage';
+
 export interface EquipmentAmortization {
   method: 'percentage_of_income';
   cost: number;
@@ -70,8 +76,16 @@ export interface MaintenanceRecord {
   type: 'routine' | 'repair' | 'inspection';
   description: string;
   cost: number;
-  technician: string;
+  technician: string; // Internal or External name
+  technicianContactId?: string; // Link to Contacts for external repairmen
+  externalTechnicianInfo?: {
+      phone?: string;
+      socialLink?: string;
+      company?: string;
+  };
+  partsReplaced?: string[];
   nextScheduledDate?: string;
+  isResolved?: boolean;
 }
 
 export interface EquipmentItem {
@@ -85,7 +99,7 @@ export interface EquipmentItem {
   vendorLink?: string;
   vendorContact?: string;
   sparePartsLink?: string;
-  knowledgeBaseLink?: string;
+  knowledgeBaseLink?: string; // Links to KB manual
   amortization: EquipmentAmortization;
   attachments?: FileAttachment[];
   isArchived: boolean;
@@ -95,23 +109,7 @@ export interface EquipmentItem {
   status?: EquipmentStatus;
   currentProductionOrderId?: string | null;
   isStorageLocation?: boolean;
-  
-  // Lean Production / Maintenance
-  maintenanceIntervalDays?: number; // Frequency of routine checkups in days
+  maintenanceIntervalDays?: number;
   nextMaintenanceDate?: string;
   maintenanceHistory?: MaintenanceRecord[];
-}
-export type SortableEquipmentKeys = 'name' | 'category' | 'cost' | 'amortizationPercentage' | 'status';
-
-export interface PayslipLineItem {
-  type: 'base' | 'remote' | 'trip_bonus' | 'task_bonus' | 'achievement_bonus' | 'deduction' | 'fund_contribution' | 'suggestion_bonus' | 'brigade_bonus';
-  description: string;
-  amount: number;
-}
-
-export interface PayslipData {
-  year: number;
-  month: number;
-  lineItems: PayslipLineItem[];
-  total: number;
 }

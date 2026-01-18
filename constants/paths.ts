@@ -5,7 +5,8 @@ export const ROUTE_PATHS = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
   ANALYTICS: '/analytics',
-  CALENDAR: '/calendar', // New path
+  CALENDAR: '/calendar', 
+  LEAN: '/lean', // New path
   PROFILE: '/profile',
   CONTACTS: '/contacts',
   WAREHOUSE: '/warehouse',

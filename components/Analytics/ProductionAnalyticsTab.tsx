@@ -43,15 +43,19 @@ const ProductionAnalyticsTab: React.FC = () => {
     }));
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-hidden">
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                 <Card>
-                     <h3 className="text-lg font-semibold text-brand-text-primary mb-4">Динамика выпуска (Факт)</h3>
-                     <BarChart data={producedChartData} color="bg-emerald-500" height={250}/>
+                 <Card className="overflow-hidden">
+                     <h3 className="text-lg font-semibold text-brand-text-primary mb-4 px-1">Динамика выпуска (Факт)</h3>
+                     <div className="p-2">
+                        <BarChart data={producedChartData} color="bg-emerald-500" height={250}/>
+                     </div>
                  </Card>
-                 <Card>
-                     <h3 className="text-lg font-semibold text-brand-text-primary mb-4">Динамика планирования</h3>
-                     <BarChart data={plannedChartData} color="bg-zinc-400" height={250}/>
+                 <Card className="overflow-hidden">
+                     <h3 className="text-lg font-semibold text-brand-text-primary mb-4 px-1">Динамика планирования</h3>
+                     <div className="p-2">
+                        <BarChart data={plannedChartData} color="bg-zinc-400" height={250}/>
+                     </div>
                  </Card>
              </div>
 
@@ -68,11 +72,11 @@ const ProductionAnalyticsTab: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-brand-border">
                             {efficiencyData.slice(0, 10).map((item) => (
-                                <tr key={item.productId} className="hover:bg-brand-secondary">
-                                    <td className="px-4 py-2 font-medium text-brand-text-primary">{item.productName}</td>
-                                    <td className="px-4 py-2 text-right">{item.totalProduced}</td>
-                                    <td className="px-4 py-2 text-right">
-                                        <span className={`font-bold ${item.avgBatchEfficiency >= 100 ? 'text-emerald-500' : item.avgBatchEfficiency < 80 ? 'text-red-500' : 'text-amber-500'}`}>
+                                <tr key={item.productId} className="hover:bg-brand-secondary transition-colors">
+                                    <td className="px-4 py-3 font-medium text-brand-text-primary">{item.productName}</td>
+                                    <td className="px-4 py-3 text-right">{item.totalProduced}</td>
+                                    <td className="px-4 py-3 text-right">
+                                        <span className={`px-2 py-1 rounded text-xs font-bold ${item.avgBatchEfficiency >= 100 ? 'bg-emerald-100 text-emerald-700' : item.avgBatchEfficiency < 80 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                                             {item.avgBatchEfficiency}%
                                         </span>
                                     </td>

@@ -12,7 +12,7 @@ import ConfirmationModal from '../UI/ConfirmationModal';
 import {
     PlusCircleIcon, TableCellsIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, TrashIcon,
     ChevronUpIcon, ChevronDownIcon, ArchiveBoxIcon as ViewArchiveIcon,
-    ArrowsUpDownIcon, CogIcon, PencilSquareIcon, ArrowDownTrayIcon, ClipboardDocumentCheckIcon
+    ArrowsUpDownIcon, CogIcon, PencilSquareIcon, ArrowDownTrayIcon, ClipboardDocumentCheckIcon, QrCodeIcon
 } from '../UI/Icons';
 import Input from '../UI/Input';
 import { useView } from '../../hooks/useView';
@@ -20,6 +20,7 @@ import MobileWarehouseItemCard from './MobileWarehouseItemCard';
 import Tooltip from '../UI/Tooltip';
 import { ROUTE_PATHS } from '../../constants';
 import { downloadCSV } from '../../utils/exportUtils';
+import ScannerModal from '../UI/ScannerModal';
 
 type SortableWarehouseKeys = keyof WarehouseItem | 'history'; 
 type SortDirection = 'asc' | 'desc';
@@ -31,6 +32,7 @@ const WarehousePage: React.FC = () => {
   const navigate = useNavigate();
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const [items, setItems] = useState<WarehouseItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,6 +116,11 @@ const WarehousePage: React.FC = () => {
     return sortableItems;
   }, [items, sortConfig]);
 
+  const handleScan = (code: string) => {
+      setIsScannerOpen(false);
+      setSearchTerm(code);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
@@ -121,6 +128,7 @@ const WarehousePage: React.FC = () => {
           {viewMode === 'active' ? 'Склад' : 'Архив склада'}
         </h1>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+          <Button onClick={() => setIsScannerOpen(true)} variant="secondary" leftIcon={<QrCodeIcon className="h-5 w-5" />} fullWidth={isMobileView}>Поиск по QR</Button>
           <Button onClick={handleExportCSV} variant="secondary" leftIcon={<ArrowDownTrayIcon className="h-5 w-5" />} fullWidth={isMobileView}>Экспорт CSV</Button>
           {viewMode === 'active' && (
               <Button onClick={() => setIsInventoryModalOpen(true)} variant="secondary" leftIcon={<ClipboardDocumentCheckIcon className="h-5 w-5" />} fullWidth={isMobileView}>Инвентаризация</Button>
@@ -135,7 +143,7 @@ const WarehousePage: React.FC = () => {
           <Input
             id="warehouse-search-input"
             type="text"
-            placeholder="Поиск по названию, SKU..."
+            placeholder="Поиск по названию, SKU или QR-коду..."
             value={searchTerm}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
             icon={<MagnifyingGlassIcon className="h-5 w-5 text-brand-text-muted" />}
@@ -202,6 +210,7 @@ const WarehousePage: React.FC = () => {
       
       <Import1CModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImportSuccess={fetchPageData} />
       <InventoryCheckModal isOpen={isInventoryModalOpen} onClose={() => setIsInventoryModalOpen(false)} onComplete={fetchPageData} />
+      <ScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleScan} />
       
       <style>{`
         .custom-scrollbar-thin::-webkit-scrollbar { width: 6px; }

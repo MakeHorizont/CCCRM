@@ -13,4 +13,5 @@ export * from './common';
 export * from './system';
 export * from './council';
 export * from './quality';
-export * from './calendar'; // New export
+export * from './calendar';
+export * from './lean'; // New export

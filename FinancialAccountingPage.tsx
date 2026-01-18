@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, ChangeEvent, useMemo } from 'react';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
@@ -41,7 +42,10 @@ const FinancialAccountingPage: React.FC = () => {
                 apiService.getMonthlyExpense(year, month),
                 apiService.getEquipmentItems({ viewMode: 'active' }),
                 apiService.getProductionOrders({ viewMode: 'active' }), // Fetch all active to filter by date
-                apiService.getTechnologyCards()
+                /**
+                 * Fixed: Added {} argument to getTechnologyCards
+                 */
+                apiService.getTechnologyCards({})
             ]);
             // The expenseData from API now includes calculated totalIncome
             setExpenses(expenseData || { year, month, totalIncome: 0, rent: 0, depreciation: 0, supplies: 0, cleaning: 0, repairs: 0, electricityPricePerKwh: 5.5, waterAndOtherUtilities: 0, electricityCost: 0 });

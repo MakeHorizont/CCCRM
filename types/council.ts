@@ -3,10 +3,11 @@ export type ProposalType =
   | 'change_fund_settings' 
   | 'withdraw_fund' 
   | 'change_salary_formula'
-  | 'change_system_mode' // New type
-  | 'general_decision';
+  | 'change_system_mode'
+  | 'general_decision'
+  | 'technological_reform';
 
-export type ProposalStatus = 'pending' | 'approved' | 'rejected';
+export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'executed';
 
 export interface CouncilVote {
   userId: string;
@@ -25,8 +26,9 @@ export interface CouncilProposal {
   initiatorName: string;
   createdAt: string;
   status: ProposalStatus;
-  payload: any; // Данные для автоматического исполнения (например, { newPercentage: 25 })
+  payload: any; 
   votes: CouncilVote[];
-  requiredApprovals: number; // Порог принятия (например, 2)
+  requiredApprovals: number; 
   executedAt?: string;
+  executedBySystem?: boolean;
 }

@@ -1,3 +1,4 @@
+
 // types/common.ts
 import { CompanyRequisites, Requisites } from './contact';
 import { OrderItem } from './order';
@@ -105,19 +106,21 @@ export interface GroupMembershipEntry {
   leaveDate?: string;
 }
 
-export type DocumentType = 'invoice' | 'waybill';
+export type DocumentType = 'invoice' | 'waybill' | 'contract' | 'act' | 'manual' | 'other';
 
 export interface Document {
     id: string;
     type: DocumentType;
     number: string;
     date: string;
-    orderId: string;
+    orderId?: string;
     ourRequisites: CompanyRequisites;
-    customerRequisites: Requisites;
-    items: OrderItem[];
-    totalAmount: number;
+    customerRequisites?: Requisites;
+    items?: OrderItem[];
+    totalAmount?: number;
     createdAt: string;
+    fileName?: string;
+    fileUrl?: string;
 }
 
 export interface LowStockItem {

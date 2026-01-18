@@ -1,62 +1,48 @@
+
 import { RotationScheduleEntry } from '../../types';
 import { generateId } from '../../utils/idGenerators';
 
 export let mockRotationSchedules: RotationScheduleEntry[] = [
     {
         id: generateId('rot'),
-        userId: 'user2', // Кораблева Ульяна (Руководитель производства)
+        userId: 'user2', // Кораблева Ульяна
         area: 'Производство',
-        startDate: '2024-08-01',
-        endDate: '2024-08-07',
+        startDate: '2024-12-01',
+        endDate: '2024-12-14',
     },
     {
         id: generateId('rot'),
         userId: 'user2',
         area: 'Коммуникации',
-        startDate: '2024-08-08',
-        endDate: '2024-08-14',
+        startDate: '2024-12-15',
+        endDate: '2024-12-31',
     },
     {
         id: generateId('rot'),
-        userId: 'user3', // Сергей Смирнов (Технолог)
-        area: 'Производство',
-        startDate: '2024-08-12',
-        endDate: '2024-08-25',
-    },
-    {
-        id: generateId('rot'),
-        userId: 'user4', // Анна Кузнецова (Маркетолог)
-        area: 'Коммуникации',
-        startDate: '2024-08-01',
-        endDate: '2024-08-11',
-    },
-     {
-        id: generateId('rot'),
-        userId: 'user4',
+        userId: 'user3', // Сергей Смирнов
         area: 'Стратегия',
-        startDate: '2024-08-12',
-        endDate: '2024-08-18',
+        startDate: '2024-12-05',
+        endDate: '2024-12-20',
     },
     {
         id: generateId('rot'),
-        userId: 'user1', // CEO
+        userId: 'user1', // Левченко Роман
         area: 'Администрирование',
-        startDate: '2024-08-19',
-        endDate: '2024-08-25',
+        startDate: '2024-12-01',
+        endDate: '2024-12-31',
     },
-    // Unassigned slots for self-assignment
     {
         id: generateId('rot'),
         userId: null,
         area: 'Производство',
-        startDate: '2024-08-15',
-        endDate: '2024-08-21',
+        startDate: '2024-12-21',
+        endDate: '2024-12-27',
     },
     {
         id: generateId('rot'),
         userId: null,
-        area: 'Стратегия',
-        startDate: '2024-08-22',
-        endDate: '2024-08-28',
+        area: 'Коммуникации',
+        startDate: '2024-12-28',
+        endDate: '2025-01-05',
     },
 ];

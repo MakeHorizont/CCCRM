@@ -1,108 +1,98 @@
+
 import { ProductionOrder, ProductionOrderItem } from '../../types';
 import { generateProductionOrderItemId } from '../../utils/idGenerators';
-import { mockWarehouseItems } from './warehouseItems'; // Ensure this is imported for BOM snapshot
 
-// Define base structure for mock data, orderItem IDs will be added in the next step
+const today = new Date();
+const formatDate = (daysAgo: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    return d.toISOString();
+};
+
 const baseProductionOrdersData = [
   {
-    id: 'PO-001',
-    name: 'Партия Темпе Классического #101',
-    orderItemsRaw: [ // Raw items without ID
-      {
-        warehouseItemId: 'TMP001',
-        productName: 'Темпе Классический Соевый 250гр',
-        plannedQuantity: 100,
-        producedQuantity: 0,
-        unit: 'шт',
-        productionRun: [],
-        billOfMaterialsSnapshot: [ 
-          { householdItemId: 'HI001', householdItemName: 'Соевые бобы органические', quantityPerUnit: 0.15, unit: 'кг' },
-          { householdItemId: 'HI005', householdItemName: 'Закваска Rhizopus Oligosporus', quantityPerUnit: 0.5, unit: 'гр' },
-        ]
-      }
+    id: 'PO-100',
+    name: 'Смена #100: Темпе Классик (Завершено)',
+    orderItemsRaw: [
+      { warehouseItemId: 'TMP001', productName: 'Темпе Классический Соевый 250гр', plannedQuantity: 100, producedQuantity: 105, unit: 'шт' }
     ],
-    status: 'Планируется' as ProductionOrder['status'],
-    plannedStartDate: '2024-07-30',
-    plannedEndDate: '2024-08-02',
+    status: 'Завершено' as ProductionOrder['status'],
+    plannedStartDate: formatDate(5),
+    plannedEndDate: formatDate(4),
+    actualStartDate: formatDate(5),
+    actualEndDate: formatDate(4),
+    assignedToId: 'user1',
+    assigneeName: 'Левченко Роман',
+    brigadeMembers: ['user1', 'user3'],
+    isPlannedOrder: true,
+    createdAt: formatDate(6),
+    updatedAt: formatDate(4),
+    isArchived: false,
+    totalCalculatedCost: 12500,
+  },
+  {
+    id: 'PO-099',
+    name: 'Смена #099: Темпе Нут (Завершено)',
+    orderItemsRaw: [
+      { warehouseItemId: 'TMP004', productName: 'Темпе Классический Нутовый 250гр', plannedQuantity: 50, producedQuantity: 48, unit: 'шт' }
+    ],
+    status: 'Завершено' as ProductionOrder['status'],
+    plannedStartDate: formatDate(10),
+    plannedEndDate: formatDate(9),
+    actualStartDate: formatDate(10),
+    actualEndDate: formatDate(9),
+    assignedToId: 'user2',
+    assigneeName: 'Кораблева Ульяна',
+    brigadeMembers: ['user2'],
+    isPlannedOrder: true,
+    createdAt: formatDate(11),
+    updatedAt: formatDate(9),
+    isArchived: false,
+    totalCalculatedCost: 8200,
+  },
+  {
+    id: 'PO-001',
+    name: 'Активная партия: Темпе Классический #101',
+    orderItemsRaw: [
+      { warehouseItemId: 'TMP001', productName: 'Темпе Классический Соевый 250гр', plannedQuantity: 100, producedQuantity: 0, unit: 'шт' }
+    ],
+    status: 'В производстве' as ProductionOrder['status'],
+    plannedStartDate: formatDate(1),
+    plannedEndDate: formatDate(-2),
     assignedToId: 'user2', 
     assigneeName: 'Кораблева Ульяна',
     brigadeMembers: ['user2', 'user3'],
     isPlannedOrder: false,
-    createdAt: '2024-07-25T10:00:00Z',
-    updatedAt: '2024-07-25T10:00:00Z',
+    createdAt: formatDate(2),
+    updatedAt: formatDate(0),
     isArchived: false,
-    needsReviewAfterSalesOrderUpdate: true,
-    notes: 'Клиент изменил количество в заказе, нужно проверить актуальность ПЗ.',
-    actualStartDate: undefined,
-    actualEndDate: undefined,
-    archivedAt: undefined,
-    relatedSalesOrderId: undefined,
-    financialTransactionsPosted: false,
+    needsReviewAfterSalesOrderUpdate: false,
   },
   {
     id: 'PO-002',
-    name: 'Партия Чипсов Копченых #55',
-    orderItemsRaw: [ // Raw items without ID
-      { 
-        warehouseItemId: 'CHIP002',
-        productName: 'Темпе-Чипсы Копченые Соевые (со специями) 100гр',
-        plannedQuantity: 500,
-        producedQuantity: 0,
-        unit: 'шт',
-        productionRun: [],
-        billOfMaterialsSnapshot: mockWarehouseItems.find(item => item.id === 'CHIP002')?.billOfMaterials || [],
-      }
+    name: 'Срочно: Темпе-Чипсы #55',
+    orderItemsRaw: [
+      { warehouseItemId: 'CHIP002', productName: 'Темпе-Чипсы Копченые Соевые 100гр', plannedQuantity: 500, producedQuantity: 0, unit: 'шт' }
     ],
     status: 'Ожидает сырья' as ProductionOrder['status'],
-    plannedStartDate: '2024-08-05',
-    plannedEndDate: '2024-08-07',
+    plannedStartDate: formatDate(-2),
+    plannedEndDate: formatDate(-5),
     assignedToId: 'user3', 
     assigneeName: 'Сергей Смирнов', 
     brigadeMembers: ['user3'],
     isPlannedOrder: true,
-    createdAt: '2024-07-26T14:00:00Z',
-    updatedAt: '2024-07-26T14:00:00Z',
+    createdAt: formatDate(1),
+    updatedAt: formatDate(0),
     isArchived: false,
-    notes: 'Срочно, под крупный заказ клиента X.',
-    relatedSalesOrderId: 'order1', 
-    needsReviewAfterSalesOrderUpdate: false,
-    actualStartDate: undefined,
-    actualEndDate: undefined,
-    archivedAt: undefined,
-    financialTransactionsPosted: false,
+    hasMaterialShortage: true,
   },
 ];
 
-// Now, map over the base structure to create the final mockProductionOrders array
-// This ensures generateProductionOrderItemId is called after the base array structure is defined.
-export let mockProductionOrders: ProductionOrder[] = baseProductionOrdersData.map(po => {
-  const orderItemsWithIds: ProductionOrderItem[] = po.orderItemsRaw.map(itemRaw => ({
-    ...itemRaw,
-    id: generateProductionOrderItemId(), // ID generated here
-  }));
-
-  // Construct the full ProductionOrder object, ensuring all fields are present
-  const fullProductionOrder: ProductionOrder = {
-    id: po.id,
-    name: po.name,
-    orderItems: orderItemsWithIds,
-    status: po.status,
-    plannedStartDate: po.plannedStartDate,
-    plannedEndDate: po.plannedEndDate,
-    actualStartDate: po.actualStartDate,
-    actualEndDate: po.actualEndDate,
-    assignedToId: po.assignedToId,
-    assigneeName: po.assigneeName,
-    brigadeMembers: po.brigadeMembers,
-    relatedSalesOrderId: po.relatedSalesOrderId,
-    isPlannedOrder: po.isPlannedOrder,
-    notes: po.notes,
-    createdAt: po.createdAt,
-    updatedAt: po.updatedAt,
-    isArchived: po.isArchived,
-    archivedAt: po.archivedAt,
-    needsReviewAfterSalesOrderUpdate: po.needsReviewAfterSalesOrderUpdate,
-    financialTransactionsPosted: po.financialTransactionsPosted,
-  };
-  return fullProductionOrder;
-});
+export let mockProductionOrders: ProductionOrder[] = baseProductionOrdersData.map(po => ({
+  ...po,
+  orderItems: po.orderItemsRaw.map(item => ({
+    ...item,
+    id: generateProductionOrderItemId(),
+    billOfMaterialsSnapshot: [],
+  })),
+}));

@@ -7,7 +7,7 @@ export interface WarehouseItemHistoryEntry {
   timestamp: string;
   userId: string;
   userName?: string;
-  changeType: 'initial' | 'increment' | 'decrement' | 'correction' | 'order_fulfillment' | 'order_return' | 'order_cancellation' | 'production_consumption' | 'production_output';
+  changeType: 'initial' | 'increment' | 'decrement' | 'correction' | 'order_fulfillment' | 'order_return' | 'order_cancellation' | 'production_consumption' | 'production_output' | 'reservation' | 'release';
   quantityChange: number;
   newQuantity: number;
   reason?: string;
@@ -43,6 +43,7 @@ export interface WarehouseItem {
   name: string;
   sku: string;
   quantity: number;
+  reservedQuantity?: number; // New: Stock reserved for active orders
   price: number;
   location: string;
   description?: string;
@@ -56,7 +57,6 @@ export interface WarehouseItem {
   lowStockThreshold?: number;
   shippingWeightGrams?: number;
 }
-export type SortableWarehouseKeys = 'name' | 'sku' | 'quantity' | 'price' | 'locationName' | 'lastUpdated';
 
 export type HouseholdCategory = 'Упаковка' | 'Сырьё' | 'Хозы' | 'Сантехника' | 'Электрика' | 'Специи' | 'Масла';
 
@@ -65,6 +65,7 @@ export interface HouseholdItem {
   name: string;
   category: HouseholdCategory;
   quantity: number;
+  reservedQuantity?: number; // New: Raw materials reserved for active production
   unit: string;
   price: number;
   lastUpdated: string;
@@ -73,14 +74,19 @@ export interface HouseholdItem {
   archivedAt?: string;
   lowStockThreshold?: number;
 }
-export type SortableHouseholdItemKeys = 'name' | 'category' | 'quantity' | 'price' | 'lastUpdated';
 
+/**
+ * Added StorageTag type
+ */
 export interface StorageTag {
   id: string;
   name: string;
   color?: string;
 }
 
+/**
+ * Added StorageLocation type
+ */
 export interface StorageLocation {
   id: string;
   name: string;
@@ -90,28 +96,32 @@ export interface StorageLocation {
   archivedAt?: string;
   createdAt: string;
   updatedAt: string;
-  equipmentId?: string;
+  equipmentId?: string; // Link to equipment if applicable
 }
 
-export type InventoryCheckStatus = 'in_progress' | 'completed' | 'cancelled';
-
+/**
+ * Added InventoryCheckItem type
+ */
 export interface InventoryCheckItem {
-  warehouseItemId: string;
-  warehouseItemName: string;
-  expectedQuantity: number;
-  actualQuantity?: number;
-  difference?: number;
+    warehouseItemId: string;
+    warehouseItemName: string;
+    expectedQuantity: number;
+    actualQuantity?: number;
+    difference?: number;
 }
 
+/**
+ * Added InventoryCheck type
+ */
 export interface InventoryCheck {
-  id: string;
-  date: string;
-  status: InventoryCheckStatus;
-  items: InventoryCheckItem[];
-  conductedByUserId: string;
-  conductedByUserName: string;
-  notes?: string;
-  createdAt: string;
-  completedAt?: string;
-  blindMode?: boolean;
+    id: string;
+    date: string;
+    status: 'in_progress' | 'completed';
+    items: InventoryCheckItem[];
+    conductedByUserId: string;
+    conductedByUserName: string;
+    createdAt: string;
+    completedAt?: string;
+    notes?: string;
+    blindMode?: boolean;
 }

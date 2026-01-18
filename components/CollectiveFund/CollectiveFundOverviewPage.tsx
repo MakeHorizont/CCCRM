@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { CollectiveFund, FundTransaction } from '../../types';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { CollectiveFund, FundTransaction, MonthlyExpense, Transaction } from '../../types';
 import { apiService } from '../../services/apiService';
 import Card from '../UI/Card';
 import LoadingSpinner from '../UI/LoadingSpinner';
-import { PencilIcon, CheckIcon, XMarkIcon, PlusCircleIcon, TrashIcon, ScaleIcon } from '../UI/Icons';
+import { PencilIcon, CheckIcon, XMarkIcon, PlusCircleIcon, TrashIcon, ScaleIcon, ArrowTrendingUpIcon, CalculatorIcon } from '../UI/Icons';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../UI/Button';
 import Input from '../UI/Input';
@@ -17,6 +17,8 @@ import Tooltip from '../UI/Tooltip';
 const CollectiveFundOverviewPage: React.FC = () => {
     const { user } = useAuth();
     const [fundData, setFundData] = useState<CollectiveFund | null>(null);
+    const [monthlyExpense, setMonthlyExpense] = useState<MonthlyExpense | null>(null);
+    const [allTxns, setAllTxns] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -33,8 +35,15 @@ const CollectiveFundOverviewPage: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const data = await apiService.getCollectiveFund();
+            const today = new Date();
+            const [data, expense, txns] = await Promise.all([
+                apiService.getCollectiveFund(),
+                apiService.getMonthlyExpense(today.getFullYear(), today.getMonth()),
+                apiService.getTransactions({ viewMode: 'active' })
+            ]);
             setFundData(data);
+            setMonthlyExpense(expense);
+            setAllTxns(txns);
             setEditedData({ balance: data.balance, contributionPercentage: data.contributionPercentage });
         } catch (err) {
             setError('Не удалось загрузить данные Коллективного Фонда.');
@@ -47,15 +56,33 @@ const CollectiveFundOverviewPage: React.FC = () => {
         fetchFundData();
     }, [fetchFundData]);
 
+    const projectedContribution = useMemo(() => {
+        if (!fundData || !monthlyExpense) return 0;
+        
+        const today = new Date();
+        const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+
+        const currentDirectExpenses = allTxns
+            .filter(tx => tx.type === 'expense' && new Date(tx.date) >= startDate && new Date(tx.date) <= endDate)
+            .reduce((sum, tx) => sum + tx.amount, 0);
+
+        const currentIncome = allTxns
+            .filter(tx => tx.type === 'income' && new Date(tx.date) >= startDate && new Date(tx.date) <= endDate)
+            .reduce((sum, tx) => sum + tx.amount, 0);
+
+        const indirectTotal = (monthlyExpense.rent || 0) + (monthlyExpense.supplies || 0) + (monthlyExpense.cleaning || 0) + (monthlyExpense.repairs || 0) + (monthlyExpense.electricityCost || 0);
+        
+        const currentProfit = currentIncome - currentDirectExpenses - indirectTotal;
+        if (currentProfit <= 0) return 0;
+
+        return (currentProfit * fundData.contributionPercentage) / 100;
+    }, [fundData, monthlyExpense, allTxns]);
+
     const handleInitiateChange = async () => {
         if (!canEdit) return;
-        
         setIsSaving(true);
-        setError(null);
-        setSuccessMsg(null);
-        
         try {
-            // Check if percent changed
             if (fundData && editedData.contributionPercentage !== fundData.contributionPercentage) {
                 await apiService.createProposal(
                     'change_fund_settings',
@@ -63,196 +90,102 @@ const CollectiveFundOverviewPage: React.FC = () => {
                     `Предлагается изменить процент отчислений от чистой прибыли с ${fundData.contributionPercentage}% на ${editedData.contributionPercentage}%.`,
                     { contributionPercentage: editedData.contributionPercentage }
                 );
-                setSuccessMsg("Предложение создано и отправлено в Совет. Изменения вступят в силу после голосования.");
-            } else if (fundData && editedData.balance !== fundData.balance) {
-                 // Direct balance correction (admin only, technically requires audit log which is handled in api)
-                 await apiService.updateCollectiveFund({ balance: editedData.balance });
-                 const updated = await apiService.getCollectiveFund();
-                 setFundData(updated);
-                 setSuccessMsg("Баланс скорректирован.");
+                setSuccessMsg("Предложение отправлено в Совет.");
             }
-
             setIsEditing(false);
         } catch (err) {
-            setError('Ошибка инициации изменений: ' + (err as Error).message);
+            setError('Ошибка: ' + (err as Error).message);
         } finally {
             setIsSaving(false);
         }
     };
 
-    const handleCancelEdit = () => {
-        setIsEditing(false);
-        if (fundData) {
-            setEditedData({ balance: fundData.balance, contributionPercentage: fundData.contributionPercentage });
-        }
-    };
-    
-    const handleSaveTransaction = async (txData: Omit<FundTransaction, 'id'>) => {
-        try {
-            await apiService.addFundTransaction(txData);
-            await fetchFundData(); // Refresh data
-            setIsTxModalOpen(false);
-        } catch (err) {
-            setError((err as Error).message);
-            throw err;
-        }
-    };
-    
-    const handleDeleteTransaction = async () => {
-        if (!txToDelete) return;
-        setIsSaving(true);
-        try {
-            await apiService.deleteFundTransaction(txToDelete.id);
-            await fetchFundData();
-            setTxToDelete(null);
-        } catch (err) {
-            setError((err as Error).message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    if (isLoading) {
-        return <div className="flex justify-center p-8"><LoadingSpinner /></div>;
-    }
-
-    if (error) {
-        return <p className="text-red-500 text-center p-4">{error}</p>;
-    }
-
-    if (!fundData) {
-        return <p className="text-brand-text-muted text-center p-4">Нет данных о фонде.</p>;
-    }
+    if (isLoading) return <div className="flex justify-center p-8"><LoadingSpinner /></div>;
 
     return (
         <div className="space-y-6">
              {successMsg && (
-                <div className="bg-emerald-100 border border-emerald-400 text-emerald-700 px-4 py-3 rounded relative flex items-center animate-fade-in" role="alert">
+                <div className="bg-emerald-100 border border-emerald-400 text-emerald-700 px-4 py-3 rounded flex items-center animate-fade-in">
                     <ScaleIcon className="h-5 w-5 mr-2"/>
                     <span className="flex-grow">{successMsg}</span>
-                     <Link to={ROUTE_PATHS.COUNCIL} className="underline font-bold ml-2 hover:text-emerald-900">Перейти в Совет</Link>
+                    <Link to={ROUTE_PATHS.COUNCIL} className="underline font-bold ml-2">Перейти в Совет</Link>
                 </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                    <p className="text-xs font-bold uppercase text-brand-text-secondary mb-1">Текущий баланс</p>
+                    <p className="text-3xl font-black text-emerald-400">
+                        {fundData?.balance.toLocaleString()} ₽
+                    </p>
+                </Card>
                 <Card>
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-sm text-brand-text-secondary">Текущий баланс</p>
-                            {isEditing ? (
-                                <Input id="fund-balance" name="balance" type="number" value={String(editedData.balance || '')} onChange={e => setEditedData(p => ({...p, balance: parseFloat(e.target.value) || 0}))} className="text-4xl font-bold !p-0 !bg-transparent border-0 focus:ring-0" />
-                            ) : (
-                                <p className="text-4xl font-bold text-emerald-400">
-                                    {fundData.balance.toLocaleString('ru-RU', { style: 'currency', currency: 'RUB' })}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                </Card>
-                <Card>
-                     <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-sm text-brand-text-secondary">Ставка отчислений</p>
+                            <p className="text-xs font-bold uppercase text-brand-text-secondary mb-1">Ставка отчислений</p>
                              {isEditing ? (
                                 <div className="flex items-center">
-                                    <Input id="fund-percentage" name="contributionPercentage" type="number" value={String(editedData.contributionPercentage || '')} onChange={e => setEditedData(p => ({...p, contributionPercentage: parseFloat(e.target.value) || 0}))} className="text-4xl font-bold !p-0 !bg-transparent border-0 focus:ring-0 w-32" />
-                                    <span className="text-4xl font-bold text-sky-400">%</span>
+                                    <Input id="fund-percentage" type="number" value={String(editedData.contributionPercentage || '')} onChange={e => setEditedData(p => ({...p, contributionPercentage: parseFloat(e.target.value) || 0}))} className="text-3xl font-bold !p-0 !bg-transparent border-0 focus:ring-0 w-20" />
+                                    <span className="text-3xl font-bold text-sky-400">%</span>
                                 </div>
                             ) : (
-                                <p className="text-4xl font-bold text-sky-400">
-                                    {fundData.contributionPercentage}%
-                                </p>
+                                <p className="text-3xl font-black text-sky-400">{fundData?.contributionPercentage}%</p>
                             )}
-                            <p className="text-xs text-brand-text-muted">от чистой прибыли предприятия</p>
                         </div>
                           {canEdit && (
-                            isEditing ? (
-                                <div className="flex space-x-1">
-                                    <Button size="sm" variant="secondary" onClick={handleCancelEdit} disabled={isSaving}><XMarkIcon className="h-5 w-5"/></Button>
-                                    <Tooltip text="Инициировать голосование Совета">
-                                        <Button size="sm" variant="primary" onClick={handleInitiateChange} isLoading={isSaving} leftIcon={<ScaleIcon className="h-4 w-4"/>}>
-                                            Голосовать
-                                        </Button>
-                                    </Tooltip>
-                                </div>
-                            ) : (
-                                <Button size="sm" variant="ghost" onClick={() => setIsEditing(true)}><PencilIcon className="h-5 w-5"/></Button>
-                            )
+                            <Button size="sm" variant="ghost" onClick={() => isEditing ? handleInitiateChange() : setIsEditing(true)}>
+                                {isEditing ? <CheckIcon className="h-5 w-5 text-emerald-500"/> : <PencilIcon className="h-5 w-5"/>}
+                            </Button>
                         )}
                     </div>
                 </Card>
+                <Card className="bg-sky-500/5 border-sky-500/30">
+                    <p className="text-xs font-bold uppercase text-sky-600 mb-1 flex items-center">
+                        <ArrowTrendingUpIcon className="h-4 w-4 mr-1"/> Прогноз пополнения
+                    </p>
+                    <p className="text-3xl font-black text-brand-text-primary">
+                        + {projectedContribution.toLocaleString(undefined, { maximumFractionDigits: 0 })} ₽
+                    </p>
+                    <p className="text-[10px] text-brand-text-muted mt-1 italic">* На основе текущей прибыли месяца</p>
+                </Card>
             </div>
 
-            <Card>
-                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold text-brand-text-primary">История Транзакций</h2>
-                    {canEdit && <Button onClick={() => setIsTxModalOpen(true)} size="sm" leftIcon={<PlusCircleIcon className="h-4 w-4"/>}>Добавить транзакцию</Button>}
+            <Card className="!p-0 overflow-hidden">
+                 <div className="p-4 border-b border-brand-border flex justify-between items-center bg-brand-surface">
+                    <h2 className="text-xl font-bold text-brand-text-primary">Журнал Общественных Средств</h2>
+                    {canEdit && <Button onClick={() => setIsTxModalOpen(true)} size="sm" leftIcon={<PlusCircleIcon className="h-4 w-4"/>}>Добавить запись</Button>}
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-brand-text-secondary">
-                        <thead className="text-xs text-brand-text-muted uppercase bg-brand-surface">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-[10px] text-brand-text-muted uppercase bg-brand-surface/50 font-bold">
                             <tr>
-                                <th className="px-4 py-3">Дата</th>
-                                <th className="px-4 py-3">Тип</th>
-                                <th className="px-4 py-3">Описание</th>
-                                <th className="px-4 py-3 text-right">Сумма</th>
-                                {canEdit && <th className="px-4 py-3 text-center">Действия</th>}
+                                <th className="px-6 py-3">Дата</th>
+                                <th className="px-6 py-3">Тип</th>
+                                <th className="px-6 py-3">Назначение / Описание</th>
+                                <th className="px-6 py-3 text-right">Сумма</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-brand-border">
-                            {fundData.history.length > 0 ? (
-                                fundData.history.map(tx => (
-                                    <tr key={tx.id} className="hover:bg-brand-secondary">
-                                        <td className="px-4 py-3 whitespace-nowrap">{new Date(tx.date).toLocaleDateString('ru-RU')}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`px-2 py-1 text-xs rounded-full ${tx.type === 'contribution' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-300'}`}>
-                                                {tx.type === 'contribution' ? 'Поступление' : 'Расход'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-brand-text-primary">{tx.description}</td>
-                                        <td className={`px-4 py-3 text-right font-semibold ${tx.type === 'contribution' ? 'text-emerald-400' : 'text-red-400'}`}>
-                                            {tx.type === 'contribution' ? '+' : '-'} {tx.amount.toLocaleString('ru-RU')} ₽
-                                        </td>
-                                        {canEdit && (
-                                            <td className="px-4 py-3 text-center">
-                                                <Button size="sm" variant="danger" className="p-1" onClick={() => setTxToDelete(tx)}>
-                                                    <TrashIcon className="h-4 w-4"/>
-                                                </Button>
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={canEdit ? 5 : 4} className="text-center p-8 text-brand-text-muted">
-                                        История транзакций пуста.
+                            {fundData?.history.map(tx => (
+                                <tr key={tx.id} className="hover:bg-brand-secondary/30 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-xs font-mono">{new Date(tx.date).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${tx.type === 'contribution' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                            {tx.type === 'contribution' ? 'Взнос' : 'Трата'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-brand-text-primary font-medium">{tx.description}</td>
+                                    <td className={`px-6 py-4 text-right font-black ${tx.type === 'contribution' ? 'text-emerald-500' : 'text-red-500'}`}>
+                                        {tx.type === 'contribution' ? '+' : '-'} {tx.amount.toLocaleString()} ₽
                                     </td>
                                 </tr>
-                            )}
+                            ))}
                         </tbody>
                     </table>
                 </div>
             </Card>
 
-            {isTxModalOpen && (
-                <FundTransactionModal
-                    isOpen={isTxModalOpen}
-                    onClose={() => setIsTxModalOpen(false)}
-                    onSave={handleSaveTransaction}
-                />
-            )}
-            
-            {txToDelete && (
-                 <ConfirmationModal
-                    isOpen={!!txToDelete}
-                    onClose={() => setTxToDelete(null)}
-                    onConfirm={handleDeleteTransaction}
-                    title="Удалить транзакцию?"
-                    message={<p>Вы уверены, что хотите удалить транзакцию <strong className="text-brand-text-primary">"{txToDelete.description}"</strong>? Баланс фонда будет пересчитан.</p>}
-                    confirmText="Удалить"
-                    isLoading={isSaving}
-                />
-            )}
+            {isTxModalOpen && <FundTransactionModal isOpen={isTxModalOpen} onClose={() => setIsTxModalOpen(false)} onSave={async (d) => { await apiService.addFundTransaction(d); fetchFundData(); setIsTxModalOpen(false); }} />}
         </div>
     );
 };

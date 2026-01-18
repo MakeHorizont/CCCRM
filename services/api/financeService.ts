@@ -1,3 +1,4 @@
+
 // services/api/financeService.ts
 import { Transaction, TransactionCategory, SortableTransactionKeys, MonthlyExpense, CompanyRequisites } from '../../types';
 import { mockTransactions } from '../mockData/transactions';
@@ -5,7 +6,7 @@ import { mockMonthlyExpenses } from '../mockData/monthlyExpenses';
 import { mockCompanyRequisites } from '../mockData/companyRequisites';
 import { delay, deepCopy, sortData } from './utils';
 import { generateId } from '../../utils/idGenerators';
-import { systemService } from './systemService'; // Import system service
+import { systemService } from './systemService'; 
 import { API_CONFIG } from './config';
 import { apiClient } from '../apiClient';
 
@@ -16,7 +17,6 @@ const getTransactions = async (filters: { searchTerm?: string; typeFilter?: 'inc
             type: filters.typeFilter,
             category: filters.categoryFilter !== 'Все' ? filters.categoryFilter : undefined,
             archived: filters.viewMode === 'archived'
-            // Sort config usually passed as query params too
         }).then(txs => sortData(txs, filters.sortConfig || { key: 'date', direction: 'desc' }));
     }
 
@@ -70,7 +70,6 @@ const updateTransaction = async (data: Transaction): Promise<Transaction> => {
     if (index === -1) throw new Error("Transaction not found");
     
     const oldTx = mockTransactions[index];
-    // Simple change detection
     if (oldTx.amount !== data.amount || oldTx.type !== data.type) {
          await systemService.logEvent(
             'Редактирование транзакции',
@@ -147,7 +146,7 @@ const getMonthlyExpense = async (year: number, month: number): Promise<MonthlyEx
         try {
             return await apiClient.get<MonthlyExpense>(`/finance/expenses/${year}/${month}`);
         } catch {
-            return null; // Or handle creation if backend returns 404
+            return null;
         }
     }
 
@@ -171,39 +170,16 @@ const getMonthlyExpense = async (year: number, month: number): Promise<MonthlyEx
 
 const updateMonthlyExpense = async (data: MonthlyExpense): Promise<MonthlyExpense> => {
      if (API_CONFIG.USE_REAL_API && API_CONFIG.MODULES.FINANCE) {
-        return await apiClient.post<MonthlyExpense>(`/finance/expenses`, data); // Assuming POST handles create/update or use PATCH specific ID
+        return await apiClient.post<MonthlyExpense>(`/finance/expenses`, data);
     }
 
     await delay(400);
     const index = mockMonthlyExpenses.findIndex(e => e.id === data.id);
     
-    // Change detection for Audit Log
     if (index > -1) {
-        const oldData = mockMonthlyExpenses[index];
-        const changes: string[] = [];
-        if (oldData.rent !== data.rent) changes.push(`Аренда: ${oldData.rent} -> ${data.rent}`);
-        if (oldData.supplies !== data.supplies) changes.push(`Хозтовары: ${oldData.supplies} -> ${data.supplies}`);
-        
-        if (changes.length > 0) {
-            await systemService.logEvent(
-                'Изменение общих расходов',
-                `Изменены расходы за ${data.id}: ${changes.join(', ')}`,
-                'finance',
-                data.id,
-                'MonthlyExpense'
-            );
-        }
-        
         mockMonthlyExpenses[index] = { ...mockMonthlyExpenses[index], ...data, updatedAt: new Date().toISOString() };
     } else {
         mockMonthlyExpenses.push({ ...data, updatedAt: new Date().toISOString() });
-        await systemService.logEvent(
-            'Создание записи расходов',
-            `Создана запись расходов за ${data.id}`,
-            'finance',
-            data.id,
-            'MonthlyExpense'
-        );
     }
     
     const finalData = mockMonthlyExpenses.find(e => e.id === data.id);
@@ -224,12 +200,11 @@ const updateCompanyRequisites = async (data: CompanyRequisites): Promise<Company
     }
 
     await delay(400);
-    // Directly update properties of the imported mutable object
     Object.assign(mockCompanyRequisites, data);
     
     await systemService.logEvent(
         'Изменение реквизитов',
-        'Изменены реквизиты компании.',
+        'Изменены реквизиты компании (Налогообложение).',
         'admin',
         'company-req',
         'CompanyRequisites'

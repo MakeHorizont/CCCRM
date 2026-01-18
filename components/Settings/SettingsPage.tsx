@@ -4,7 +4,7 @@ import Card from '../UI/Card';
 import Input from '../UI/Input';
 import Button from '../UI/Button';
 import { useAuth } from '../../hooks/useAuth';
-import { UserCircleIcon, EnvelopeIcon, LockClosedIcon, BuildingOfficeIcon, SunIcon, MoonIcon, SparklesIcon, FireIcon, ScaleIcon, CheckCircleIcon, ServerIcon } from '../UI/Icons';
+import { UserCircleIcon, EnvelopeIcon, LockClosedIcon, BuildingOfficeIcon, SunIcon, MoonIcon, SparklesIcon, FireIcon, ScaleIcon, CheckCircleIcon, ServerIcon, CogIcon } from '../UI/Icons';
 import { apiService } from '../../services/apiService';
 import { CompanyRequisites, Requisites } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -13,7 +13,7 @@ import ToggleSwitch from '../UI/ToggleSwitch';
 import AdminSettingsTab from './tabs/AdminSettingsTab';
 
 const REQUISITE_FIELDS: (keyof Requisites)[] = [
-    'name', 'legalAddress', 'inn', 'ogrn', 'bankAccount', 'bankName', 'bik', 'city', 'correspondentAccount', 'okpo', 'oktmo', 'phone', 'email', 'website'
+    'name', 'legalAddress', 'inn', 'ogrn', 'bankAccount', 'bankName', 'bik', 'city', 'correspondentAccount', 'okpo', 'oktmo', 'phone', 'email', 'website', 'kpp'
 ];
 
 const REQUISITE_LABELS: Record<keyof Requisites, string> = {
@@ -30,7 +30,9 @@ const REQUISITE_LABELS: Record<keyof Requisites, string> = {
     oktmo: 'ОКТМО',
     phone: 'Телефон (юр. лица)',
     email: 'E-mail (юр. лица)',
-    website: 'Сайт'
+    website: 'Сайт',
+    // FIX: Add missing 'kpp' key to satisfy type requirement
+    kpp: 'КПП'
 };
 
 type SettingsTab = 'profile' | 'system' | 'admin';
@@ -374,4 +376,3 @@ const SettingsPage: React.FC = () => {
 };
 
 export default SettingsPage;
-import { CogIcon } from '../UI/Icons';

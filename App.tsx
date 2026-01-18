@@ -47,7 +47,8 @@ import AuditLogPage from './components/System/AuditLogPage';
 import CouncilPage from './components/Council/CouncilPage';
 import AnalyticsPage from './components/Analytics/AnalyticsPage'; 
 import QualityControlPage from './components/Quality/QualityControlPage'; 
-import CalendarPage from './components/Calendar/CalendarPage'; // New Import
+import CalendarPage from './components/Calendar/CalendarPage'; 
+import LeanPage from './components/Lean/LeanPage'; // New Import
 
 import { useAuth } from './hooks/useAuth';
 import { ROUTE_PATHS } from './constants';
@@ -138,6 +139,9 @@ const App: React.FC = () => {
 
                 {/* Quality Control Route */}
                 <Route path={ROUTE_PATHS.QUALITY_CONTROL.substring(1)} element={<QualityControlPage />} />
+
+                {/* Lean Production Route */}
+                <Route path={ROUTE_PATHS.LEAN.substring(1)} element={<LeanPage />} />
 
                 {/* Contacts Routes */}
                 <Route path={ROUTE_PATHS.CONTACTS.substring(1)} element={<ContactsPage />} />

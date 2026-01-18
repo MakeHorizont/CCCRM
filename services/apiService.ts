@@ -29,6 +29,7 @@ import { searchService } from './api/searchService';
 import { adminService } from './api/adminService';
 import { inventoryService } from './api/inventoryService';
 import { calendarService } from './api/calendarService';
+import { leanService } from './api/leanService'; // New import
 
 export const apiService = {
     ...contactApi,
@@ -61,4 +62,5 @@ export const apiService = {
     ...adminService,
     ...inventoryService,
     ...calendarService,
+    ...leanService,
 };

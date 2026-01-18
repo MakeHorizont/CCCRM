@@ -1,11 +1,13 @@
 
 import React, { useState } from 'react';
-import { ChartPieIcon, CogIcon, BanknotesIcon, UserGroupIcon } from '../UI/Icons';
+import { ChartPieIcon, CogIcon, BanknotesIcon, UserGroupIcon, SparklesIcon, ScaleIcon } from '../UI/Icons';
 import ProductionAnalyticsTab from './ProductionAnalyticsTab';
 import CostAnalyticsTab from './CostAnalyticsTab';
 import LaborAnalyticsTab from './LaborAnalyticsTab';
+import AIOversightTab from './AIOversightTab';
+import JusticeAnalyticsTab from './JusticeAnalyticsTab';
 
-type AnalyticsTab = 'production' | 'finance' | 'labor';
+type AnalyticsTab = 'production' | 'finance' | 'labor' | 'ai' | 'justice';
 
 const AnalyticsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('production');
@@ -26,7 +28,7 @@ const AnalyticsPage: React.FC = () => {
       </div>
 
       <div className="border-b border-brand-border">
-        <nav className="-mb-px flex space-x-2 overflow-x-auto" aria-label="Tabs">
+        <nav className="-mb-px flex space-x-2 overflow-x-auto custom-scrollbar-thin" aria-label="Tabs">
           <button onClick={() => setActiveTab('production')} className={tabButtonStyle('production')}>
             <CogIcon className="h-5 w-5 mr-2"/> Производство
           </button>
@@ -36,6 +38,12 @@ const AnalyticsPage: React.FC = () => {
           <button onClick={() => setActiveTab('labor')} className={tabButtonStyle('labor')}>
             <UserGroupIcon className="h-5 w-5 mr-2"/> Труд и Кадры
           </button>
+          <button onClick={() => setActiveTab('justice')} className={tabButtonStyle('justice')}>
+            <ScaleIcon className="h-5 w-5 mr-2"/> Справедливость
+          </button>
+          <button onClick={() => setActiveTab('ai')} className={tabButtonStyle('ai')}>
+            <SparklesIcon className="h-5 w-5 mr-2 text-purple-400"/> ИИ-Сенсор
+          </button>
         </nav>
       </div>
 
@@ -43,6 +51,8 @@ const AnalyticsPage: React.FC = () => {
         {activeTab === 'production' && <ProductionAnalyticsTab />}
         {activeTab === 'finance' && <CostAnalyticsTab />}
         {activeTab === 'labor' && <LaborAnalyticsTab />}
+        {activeTab === 'justice' && <JusticeAnalyticsTab />}
+        {activeTab === 'ai' && <AIOversightTab />}
       </div>
     </div>
   );

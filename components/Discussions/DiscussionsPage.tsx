@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DiscussionTopic, DiscussionPost, User, Vote, DiscussionStatus, DiscussionType, RationalizationDetails } from '../../types';
 import { apiService } from '../../services/apiService';
@@ -8,9 +7,9 @@ import { useView } from '../../hooks/useView';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import LoadingSpinner from '../UI/LoadingSpinner';
-import { ChatBubbleOvalLeftEllipsisIcon, PlusCircleIcon, ArrowLeftIcon, TagIcon, ChatBubbleLeftRightIcon, FlagIcon, CheckCircleIcon, XCircleIcon, PencilSquareIcon, ArchiveBoxIcon, TrashIcon, LightBulbIcon, BanknotesIcon } from '../UI/Icons';
+import { ChatBubbleOvalLeftEllipsisIcon, PlusCircleIcon, ArrowLeftIcon, TagIcon, ChatBubbleLeftRightIcon, FlagIcon, CheckCircleIcon, XCircleIcon, PencilSquareIcon, ArchiveBoxIcon, TrashIcon, LightBulbIcon, BanknotesIcon, ScaleIcon } from '../UI/Icons';
 import MarkdownDisplay from '../UI/MarkdownDisplay';
-import { DISCUSSION_STATUS_COLOR_MAP } from '../../constants';
+import { DISCUSSION_STATUS_COLOR_MAP, ROUTE_PATHS } from '../../constants';
 import Modal from '../UI/Modal';
 import Input from '../UI/Input';
 import MarkdownEditor from '../KnowledgeBase/MarkdownEditor';
@@ -20,7 +19,7 @@ import VotingWidget from './VotingWidget';
 import PostItem from './PostItem';
 import ConfirmationModal from '../UI/ConfirmationModal';
 import CreateTopicModal from './CreateTopicModal';
-
+import { useNavigate } from 'react-router-dom';
 
 type PostWithChildren = DiscussionPost & { children: PostWithChildren[] };
 
@@ -100,7 +99,6 @@ const TopicEditorModal: React.FC<{
         setIsDeleteConfirmOpen(false);
         onClose();
     };
-
 
     return (
         <>
@@ -230,6 +228,7 @@ const ImplementationModal: React.FC<{ isOpen: boolean; onClose: () => void; onCo
 };
 
 const DiscussionsPage: React.FC = () => {
+    const navigate = useNavigate();
     const [topics, setTopics] = useState<DiscussionTopic[]>([]);
     const [selectedTopic, setSelectedTopic] = useState<DiscussionTopic | null>(null);
     const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -237,8 +236,8 @@ const DiscussionsPage: React.FC = () => {
     const [isLoadingDetail, setIsLoadingDetail] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // Replaced editor with CreateTopicModal for new items
-    const [isEditorModalOpen, setIsEditorModalOpen] = useState(false); // For editing existing
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isEditorModalOpen, setIsEditorModalOpen] = useState(false); 
     const [topicToEdit, setTopicToEdit] = useState<DiscussionTopic | null>(null);
     const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
     const [isImplModalOpen, setIsImplModalOpen] = useState(false);
@@ -263,7 +262,7 @@ const DiscussionsPage: React.FC = () => {
             if (selectTopicId) {
                 await handleSelectTopic(selectTopicId, topicsData);
             } else if (selectedTopic && !topicsData.find(t => t.id === selectedTopic.id)) {
-                setSelectedTopic(null); // Deselect if filtered out
+                setSelectedTopic(null);
             }
         } catch (err) {
             setError("Не удалось загрузить список обсуждений.");
@@ -284,7 +283,7 @@ const DiscussionsPage: React.FC = () => {
             const topicList = currentTopics || topics;
             const topicFromList = topicList.find(t => t.id === topicId);
             if(topicFromList && topicFromList.posts?.length === topicFromList.postCount){
-                setSelectedTopic(topicFromList); // Use cached data if post count matches
+                setSelectedTopic(topicFromList);
             } else {
                  const topicDetail = await apiService.getDiscussionTopicById(topicId);
                  setSelectedTopic(topicDetail);
@@ -338,6 +337,24 @@ const DiscussionsPage: React.FC = () => {
         setSelectedTopic(null);
     };
 
+    const handleEscalateToCouncil = async () => {
+        if (!selectedTopic || !user) return;
+        setIsLoadingDetail(true);
+        try {
+            await apiService.createProposal(
+                'technological_reform',
+                `Реформа по инициативе: ${selectedTopic.title}`,
+                `Предложение основано на рацпредложении товарища ${selectedTopic.authorName}. \n\nСуть: ${selectedTopic.rationalization?.solution || selectedTopic.description}`,
+                { discussionTopicId: selectedTopic.id, authorId: selectedTopic.authorId }
+            );
+            alert("Инициатива успешно вынесена на рассмотрение Совета!");
+            navigate(ROUTE_PATHS.COUNCIL);
+        } catch (err) {
+            alert((err as Error).message);
+        } finally {
+            setIsLoadingDetail(false);
+        }
+    };
 
     const handleStartVote = async (proposal: string) => {
         if (!selectedTopic) return;
@@ -541,6 +558,13 @@ const DiscussionsPage: React.FC = () => {
                                 </h3>
                             </div>
                             <div className="flex space-x-2">
+                                {user && selectedTopic.type === 'rationalization' && selectedTopic.status === 'open' && (
+                                    <Tooltip text="Предложить реформу на уровне Совета">
+                                        <Button size="sm" onClick={handleEscalateToCouncil} className="!bg-sky-600 text-white" leftIcon={<ScaleIcon className="h-4 w-4"/>}>
+                                            На Совет
+                                        </Button>
+                                    </Tooltip>
+                                )}
                                 {user && (selectedTopic.authorId === user.id || user.role === 'ceo') && selectedTopic.status === 'open' && selectedTopic.type === 'general' && (
                                     <Button size="sm" onClick={() => setIsVoteModalOpen(true)} leftIcon={<FlagIcon className="h-4 w-4"/>}>
                                         Начать голосование

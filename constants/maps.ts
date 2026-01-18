@@ -1,3 +1,4 @@
+
 // constants/maps.ts
 import { ContactPriority, OrderStatus, KanbanTaskStatus, StrategicPlan, ProductionOrderStatus, PurchaseRequestStatus, EquipmentStatus, DiscussionStatus, DocumentType, UserStatus, TaskStage, PerformanceReview, AttendanceEntry, SocialInitiativeStatus, RotationArea } from '../types';
 import { LinkIcon, PhoneIcon, CheckCircleIcon, FireIcon, StarIcon, SparklesIcon, HashtagIcon } from '../components/UI/Icons';
@@ -30,9 +31,14 @@ export const ORDER_STATUS_COLOR_MAP: Record<OrderStatus | 'default', string> = {
   'default': 'bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200',
 };
 
+// FIX: Add missing properties to satisfy Record<DocumentType, string> requirement
 export const DOCUMENT_TYPE_COLOR_MAP: Record<DocumentType, string> = {
   invoice: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
   waybill: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+  contract: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  act: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  manual: 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200',
+  other: 'bg-zinc-100 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200',
 };
 
 export const DISCUSSION_STATUS_COLOR_MAP: Record<DiscussionStatus | 'default', string> = {

@@ -1,3 +1,4 @@
+
 // types/contact.ts
 
 export interface Requisites {
@@ -15,9 +16,13 @@ export interface Requisites {
   phone?: string;
   email?: string;
   website?: string;
+  kpp?: string;
 }
 
-export type CompanyRequisites = Requisites;
+export interface CompanyRequisites extends Requisites {
+    taxSystem?: 'usn_6' | 'usn_15';
+    annualInsuranceFixed?: number;
+}
 
 export interface SocialMediaLinks {
   instagram?: string;

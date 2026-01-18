@@ -1,77 +1,80 @@
+
 import { Order } from '../../types';
-import { generateOrderItemId } from '../../utils/idGenerators'; // Import directly from the new util file
+import { generateOrderItemId } from '../../utils/idGenerators';
 
 export let mockOrders: Order[] = [
   { 
-    id: 'order1', 
+    id: 'order-101', 
     contactId: 'contact1', 
     customerName: 'Иван Петров', 
     customerPriority: '1', 
     items: [
-      { id: generateOrderItemId(), productId: 'TMP001', productName: 'Темпе Классический Соевый 250гр', quantity: 2, pricePerUnit: 250, isAssembled: false }, 
-      { id: generateOrderItemId(), productId: 'CHIP002', productName: 'Темпе-Чипсы Копченые Соевые (со специями) 100гр', quantity: 1, pricePerUnit: 200, isAssembled: false }
+      { id: generateOrderItemId(), productId: 'TMP001', productName: 'Темпе Классический Соевый 250гр', quantity: 20, pricePerUnit: 250, isAssembled: false }, 
     ], 
-    status: 'Новый', 
-    date: '2023-10-25', 
-    amount: 700, 
-    isPaid: false, 
-    isInvoiceSent: false, 
+    status: 'Может быть собран', 
+    date: '2024-12-05', 
+    amount: 5000, 
+    isPaid: true, 
+    paidAt: '2024-12-06T12:00:00Z',
+    isInvoiceSent: true, 
+    invoiceSentAt: '2024-12-05T10:00:00Z',
     isArchived: false, 
-    productionOrderId: null,
-    assembledOrderLocationId: null,
+    productionOrderId: 'PO-100',
     deliveryType: 'delivery',
-    thermalInsulation: false,
-    deliveryCost: 300,
     history: [],
-    waybillAttachmentUrl: null,
   },
   { 
-    id: 'order2', 
+    id: 'order-102', 
     contactId: 'contact2', 
     customerName: 'Мария Сидорова', 
     customerPriority: '2', 
     items: [
-      { id: generateOrderItemId(), productId: 'TMP003', productName: 'Темпе Классический Гречневый 250гр', quantity: 5, pricePerUnit: 260, isAssembled: false }
+      { id: generateOrderItemId(), productId: 'TMP003', productName: 'Темпе Классический Гречневый 250гр', quantity: 15, pricePerUnit: 260, isAssembled: true }
     ], 
-    status: 'В обработке', 
-    date: '2023-10-24', 
-    amount: 1300, 
+    status: 'Доставлен', 
+    date: '2024-12-10', 
+    amount: 3900, 
     isPaid: true, 
-    paidAt: '2023-10-24T12:00:00Z',
-    isInvoiceSent: true, 
-    invoiceSentAt: '2023-10-24T10:00:00Z',
+    paidAt: '2024-12-11T12:00:00Z',
+    isInvoiceSent: true, // FIX: Added missing isInvoiceSent property
+    sentAt: '2024-12-12T15:00:00Z',
     isArchived: false, 
-    productionOrderId: null,
-    assembledOrderLocationId: null,
-    deliveryType: 'pickup',
-    thermalInsulation: true,
-    deliveryCost: 0,
+    deliveryType: 'delivery',
     history: [],
-    waybillAttachmentUrl: null,
   },
   { 
-    id: 'order3', 
+    id: 'order-103', 
     contactId: 'contact1', 
     customerName: 'Иван Петров', 
     customerPriority: '3', 
     items: [
-      { id: generateOrderItemId(), productId: 'TMP004', productName: 'Темпе Классический Нутовый 250гр', quantity: 10, pricePerUnit: 270, isAssembled: true }
+      { id: generateOrderItemId(), productId: 'TMP004', productName: 'Темпе Классический Нутовый 250гр', quantity: 50, pricePerUnit: 270, isAssembled: false }
     ], 
-    status: 'Отправлен', 
-    date: '2023-10-23', 
-    amount: 2700, 
-    isPaid: true, 
-    paidAt: '2023-10-23T11:00:00Z',
+    status: 'В обработке', 
+    date: '2024-12-15', 
+    amount: 13500, 
+    isPaid: false, 
     isInvoiceSent: true, 
-    invoiceSentAt: '2023-10-23T10:00:00Z',
-    sentAt: '2023-10-26T15:00:00Z',
+    invoiceSentAt: '2024-12-16T10:00:00Z',
     isArchived: false, 
-    productionOrderId: null,
-    assembledOrderLocationId: 'loc4',
-    deliveryType: 'delivery',
-    thermalInsulation: false,
-    deliveryCost: 350,
+    deliveryType: 'pickup',
     history: [],
-    waybillAttachmentUrl: '/mock-uploads/TN-order3.pdf',
   },
+  { 
+    id: 'order-104', 
+    contactId: 'contact2', 
+    customerName: 'Мария Сидорова', 
+    customerPriority: '1', 
+    items: [
+      { id: generateOrderItemId(), productId: 'CHIP001', productName: 'Темпе-Чипсы Классические 100гр', quantity: 100, pricePerUnit: 180, isAssembled: false }
+    ], 
+    status: 'Новый', 
+    date: '2024-12-20', 
+    amount: 18000, 
+    isPaid: false, 
+    isInvoiceSent: false,
+    isArchived: false, 
+    deliveryType: 'delivery',
+    history: [],
+  }
 ];

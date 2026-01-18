@@ -66,17 +66,17 @@ const TechnologiesPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const results = await Promise.all([
+      // FIX: Explicitly cast Promise.all results to resolve 'unknown' type issue in destructuring
+      const [itemsData, cardsData] = await Promise.all([
         apiService.getWarehouseItems({ viewMode: 'active' }), 
         apiService.getTechnologyCards({ viewMode })
-      ]);
-      const itemsData = results[0] as WarehouseItem[];
-      const cardsData = results[1] as TechnologyCard[];
+      ]) as [WarehouseItem[], TechnologyCard[]];
       
       const producible = itemsData.filter(item => item.billOfMaterials && item.billOfMaterials.length > 0);
       setProducibleItems(producible);
       
-      const cardsMap = cardsData.reduce<Record<string, TechnologyCard>>((acc, card) => {
+      // FIX: Explicitly type 'card' as TechnologyCard to avoid 'unknown' type error
+      const cardsMap = cardsData.reduce<Record<string, TechnologyCard>>((acc, card: TechnologyCard) => {
         acc[card.warehouseItemId] = card;
         return acc;
       }, {});

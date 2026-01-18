@@ -30,6 +30,29 @@ export interface DailyStats {
   completedTasksCount: number;
 }
 
+export interface HonorBoardEntry {
+  userId: string;
+  userName: string;
+  ktu: number;
+  achievementsCount: number;
+  tasksCompleted: number;
+  avatarLetter: string;
+}
+
+// FIX: Added exported PayslipLineItem and PayslipData interfaces
+export interface PayslipLineItem {
+  type: 'base' | 'task_bonus' | 'deduction' | 'trip_bonus' | 'remote_bonus';
+  description: string;
+  amount: number;
+}
+
+export interface PayslipData {
+  year: number;
+  month: number;
+  lineItems: PayslipLineItem[];
+  total: number;
+}
+
 export interface User {
   id: string;
   email: string;
